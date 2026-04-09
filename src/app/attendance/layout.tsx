@@ -1,0 +1,4 @@
+// src/app/attendance/layout.tsx
+export default function AttendanceLayout({ children }: { children: React.ReactNode }) {
+  return <>{children}</>
+}
