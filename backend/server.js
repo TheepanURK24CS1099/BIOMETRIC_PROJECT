@@ -9,6 +9,7 @@ const prisma = require('./db')
 const whatsappRouter = require('./routes/whatsapp')
 const { router: deviceRouter } = require('./routes/device')
 const { readDeviceStatus } = require('./services/deviceService')
+const { sendAttendanceWhatsApp } = require('./services/whatsappService')
 
 validateEnvironment()
 
@@ -42,6 +43,23 @@ console.log('Backend environment loaded:', {
 
 app.get('/health', (_req, res) => {
   res.json({ success: true, message: 'Server is running' })
+})
+
+app.post('/send-whatsapp', async (req, res) => {
+  try {
+    const { name, status, phone, room } = req.body
+
+    const result = await sendAttendanceWhatsApp(name, status, phone, room)
+
+    if (result) {
+      return res.json({ success: true, message: 'WhatsApp sent' })
+    } else {
+      return res.status(500).json({ success: false, error: 'Failed to send WhatsApp' })
+    }
+  } catch (err) {
+    console.error('WhatsApp route error:', err)
+    res.status(500).json({ success: false, error: 'Server error' })
+  }
 })
 
 if (SOCKET_ENABLED && io?.on) {
