@@ -1,7 +1,14 @@
 const axios = require('axios')
 
 function normalizePhone(phone) {
-  return String(phone || '').replace(/\D/g, '').replace(/^91/, '')
+  let cleaned = String(phone || '').replace(/\D/g, '')
+  
+  // Ensure starts with 91
+  if (!cleaned.startsWith('91')) {
+    cleaned = '91' + cleaned
+  }
+
+  return cleaned
 }
 
 function getTemplateName() {
@@ -12,27 +19,25 @@ function getTodayDate() {
   return new Date().toISOString().split('T')[0]
 }
 
-async function sendAttendanceWhatsApp(name, status, phone) {
-  const smsProvider = process.env.SMS_PROVIDER || 'mock'
+async function sendAttendanceWhatsApp(name, status, phone, room) {
   const whatsappProvider = process.env.WHATSAPP_PROVIDER || 'mock'
   const apiKey = process.env.FAST2SMS_API_KEY
   const phoneNumberId = process.env.FAST2SMS_WHATSAPP_PHONE_NUMBER_ID
   const templateName = getTemplateName()
 
   console.log('WhatsApp config:', {
-    smsProvider,
-    whatsappProvider,
+    provider: whatsappProvider,
     templateName,
     phoneNumberId: phoneNumberId ? 'set' : 'missing',
   })
 
   if (whatsappProvider !== 'fast2sms') {
-    console.log('⚠ WhatsApp provider disabled')
+    console.log('⚠ WhatsApp disabled')
     return false
   }
 
   if (!apiKey || !phoneNumberId) {
-    console.error('Missing FAST2SMS_API_KEY or FAST2SMS_WHATSAPP_PHONE_NUMBER_ID')
+    console.error('❌ Missing API KEY or PHONE NUMBER ID')
     return false
   }
 
@@ -49,6 +54,7 @@ async function sendAttendanceWhatsApp(name, status, phone) {
           type: 'body',
           parameters: [
             { type: 'text', text: name },
+            { type: 'text', text: room || '-' },
             { type: 'text', text: status },
             { type: 'text', text: getTodayDate() },
           ],
@@ -59,24 +65,22 @@ async function sendAttendanceWhatsApp(name, status, phone) {
 
   try {
     const url = `https://www.fast2sms.com/dev/whatsapp/v24.0/${phoneNumberId}/messages`
+
     const response = await axios.post(url, payload, {
       headers: {
         authorization: apiKey,
         'Content-Type': 'application/json',
-        accept: 'application/json',
       },
       timeout: 15000,
     })
 
-    console.log('Fast2SMS WhatsApp response:', response.data)
-    console.log(`✅ WhatsApp sent to +91${normalizePhone(phone)}`)
+    console.log('✅ WhatsApp sent:', response.data)
     return true
+
   } catch (error) {
-    if (error.response) {
-      console.error('Fast2SMS WhatsApp failed:', error.response.data || error.response.statusText)
-    } else {
-      console.error('Fast2SMS WhatsApp request failed:', error.message || error)
-    }
+    console.error('❌ WhatsApp error:',
+      error.response?.data || error.message
+    )
     return false
   }
 }

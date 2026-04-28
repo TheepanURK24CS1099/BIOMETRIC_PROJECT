@@ -11,6 +11,7 @@
 import prisma from '@/lib/prisma'
 import { ensureTodaySessionExists } from '@/lib/createDailySession'
 import { sendAttendanceSMS } from '@/lib/sms'
+import { sendWhatsApp } from '@/lib/whatsapp'
 import { getTodayDate, getCurrentTime } from '@/lib/utils'
 
 export interface AutoAbsentResult {
@@ -69,15 +70,25 @@ export async function runAutoAbsent(date?: string): Promise<AutoAbsentResult> {
           WHERE "studentId" = ${student.id} AND "date" = ${targetDate}
         `
 
-        // Send SMS notification to parent
-        await sendAttendanceSMS({
-          studentName: student.name,
-          roomNumber: student.roomNumber,
-          status: 'ABSENT',
-          parentPhone: student.parentPhone,
-          date: targetDate,
-          time: null,
+        const whatsappSent = await sendWhatsApp({
+          phone: student.parentPhone,
+          message: `❌ ${student.name} (Room ${student.roomNumber}) marked ABSENT on ${new Date().toLocaleDateString()}`,
+        }).catch((err) => {
+          console.error('WhatsApp error:', err)
+          return false
         })
+
+        if (!whatsappSent) {
+          // Send SMS notification to parent
+          await sendAttendanceSMS({
+            studentName: student.name,
+            roomNumber: student.roomNumber,
+            status: 'ABSENT',
+            parentPhone: student.parentPhone,
+            date: targetDate,
+            time: null,
+          })
+        }
 
         marked++
         console.log(`✅ Marked absent: ${student.name}`)

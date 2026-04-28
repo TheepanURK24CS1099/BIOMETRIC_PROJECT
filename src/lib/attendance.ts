@@ -2,8 +2,6 @@
 import prisma from '@/lib/prisma'
 import { ensureTodaySessionExists, getTodaySession } from '@/lib/createDailySession'
 import { getCurrentTime, getTodayDate, isLate } from '@/lib/utils'
-import { sendAttendanceWhatsApp } from '@/lib/whatsapp'
-import { sendAttendanceSMS } from '@/lib/sms'
 
 type AttendanceMarkResult =
   | {
@@ -53,29 +51,6 @@ export async function markAttendanceByFingerprint(fingerprintId: string | null |
     where: { studentId: student.id, date: today } as any,
   })
 
-  async function sendNotification(statusToSend: 'PRESENT' | 'ABSENT' | 'LATE', studentName: string, parentPhone: string) {
-    const whatsappSent = await sendAttendanceWhatsApp(studentName, statusToSend, parentPhone)
-
-    if (whatsappSent) {
-      return
-    }
-
-    console.log('⚠ WhatsApp failed → SMS fallback')
-    const smsResult = await sendAttendanceSMS({
-      studentName,
-      status: statusToSend,
-      parentPhone,
-      date: today,
-      time: currentTime,
-    })
-
-    if (smsResult.success) {
-      console.log('✅ SMS sent')
-    } else {
-      console.log('⚠ SMS failed')
-    }
-  }
-
   if (existingRecord) {
     if (existingRecord.status === 'ABSENT') {
       const correctedAttendance = await prisma.attendance.update({
@@ -91,10 +66,6 @@ export async function markAttendanceByFingerprint(fingerprintId: string | null |
         SET "studentName" = ${student.name}
         WHERE "id" = ${correctedAttendance.id}
       `
-
-      void sendNotification('PRESENT', student.name, student.parentPhone).catch((error) =>
-        console.error('Notification send failed:', error)
-      )
 
       return {
         success: true,
@@ -132,10 +103,6 @@ export async function markAttendanceByFingerprint(fingerprintId: string | null |
     SET "studentName" = ${student.name}
     WHERE "id" = ${attendance.id}
   `
-
-  void sendNotification(status, student.name, student.parentPhone).catch((error) =>
-    console.error('Notification send failed:', error)
-  )
 
   return {
     success: true,
