@@ -53,9 +53,9 @@ async function sendAttendanceWhatsApp(name, status, phone, room) {
         {
           type: 'body',
           parameters: [
-            { type: 'text', text: name },
-            { type: 'text', text: status },
-            { type: 'text', text: getTodayDate() },
+              { type: 'text', text: "Test User" },
+              { type: 'text', text: "PRESENT" },
+              { type: 'text', text: "2026-04-28" },
           ],
         },
       ],
