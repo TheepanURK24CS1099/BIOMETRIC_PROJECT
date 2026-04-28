@@ -71,7 +71,10 @@ export default function DashboardPage() {
 
   async function fetchStats() {
     try {
-      const res = await fetch('/api/attendance/stats')
+      const res = await fetch('/api/attendance/stats', {
+        method: 'GET',
+        credentials: 'include',
+      })
       const data = await res.json()
       if (data.success) setStats(data.data)
     } catch {
@@ -84,7 +87,10 @@ export default function DashboardPage() {
   async function loadStudents() {
     setStudentsLoading(true)
     try {
-      const res = await fetch('/api/students')
+      const res = await fetch('/api/students', {
+        method: 'GET',
+        credentials: 'include',
+      })
       const data = await res.json()
       if (data.success) {
         setStudents(data.data)
@@ -103,7 +109,7 @@ export default function DashboardPage() {
 
     setDeletingStudentId(student.id)
     try {
-      const res = await fetch(`/api/students/${student.id}`, { method: 'DELETE' })
+      const res = await fetch(`/api/students/${student.id}`, { method: 'DELETE', credentials: 'include' })
       const data = await res.json()
 
       if (data.success) {
@@ -122,7 +128,12 @@ export default function DashboardPage() {
   async function triggerAutoAbsent() {
     setRunningAbsent(true)
     try {
-      const res = await fetch('/api/attendance/auto-absent', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+      const res = await fetch('/api/attendance/auto-absent', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}',
+      })
       const data = await res.json()
       if (data.success) {
         toast.success(data.message)
@@ -140,7 +151,7 @@ export default function DashboardPage() {
 
     setClosingAttendance(true)
     try {
-      const res = await fetch('/api/attendance/close', { method: 'POST' })
+      const res = await fetch('/api/attendance/close', { method: 'POST', credentials: 'include' })
       const data = await res.json()
 
       if (data.success) {
@@ -161,7 +172,7 @@ export default function DashboardPage() {
 
     setResettingAttendance(true)
     try {
-      const res = await fetch('/api/attendance/reset-today', { method: 'POST' })
+      const res = await fetch('/api/attendance/reset-today', { method: 'POST', credentials: 'include' })
       const data = await res.json()
 
       if (data.success) {
@@ -184,6 +195,7 @@ export default function DashboardPage() {
     try {
       const res = await fetch('/api/students/register', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(studentForm),
       })
