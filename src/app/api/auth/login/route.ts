@@ -1,8 +1,9 @@
-// src/app/api/auth/login/route.ts
 import { NextRequest, NextResponse } from 'next/server'
+import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
-import prisma from '@/lib/prisma'
 import { signToken } from '@/lib/auth'
+
+const prisma = new PrismaClient()
 
 export async function POST(req: NextRequest) {
   try {
@@ -11,12 +12,14 @@ export async function POST(req: NextRequest) {
 
     if (!username || !password) {
       return NextResponse.json(
-        { success: false, error: 'Username and password are required' },
+        { success: false, error: 'Username and password required' },
         { status: 400 }
       )
     }
 
-    const admin = await (prisma as any).admin.findUnique({ where: { username } })
+    const admin = await prisma.admin.findUnique({
+      where: { username },
+    })
 
     if (!admin) {
       return NextResponse.json(
@@ -34,29 +37,36 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // 🔐 Create token
     const token = await signToken({
       adminId: admin.id,
       username: admin.username,
       name: admin.name,
     })
 
+    // ✅ Response
     const response = NextResponse.json({
       success: true,
-      data: { name: admin.name, username: admin.username },
+      data: {
+        name: admin.name,
+        username: admin.username,
+      },
       message: 'Login successful',
     })
 
+    // 🍪 FIXED COOKIE (IMPORTANT)
     response.cookies.set('auth-token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 60 * 60 * 8, // 8 hours
+      secure: false,        // ✅ IMPORTANT for HTTP VPS
+      sameSite: 'lax',      // ✅ avoids blocking
+      maxAge: 60 * 60 * 8,  // 8 hours
       path: '/',
     })
 
     return response
   } catch (error) {
     console.error('Login error:', error)
+
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

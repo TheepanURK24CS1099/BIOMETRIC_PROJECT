@@ -1,4 +1,5 @@
 // src/app/api/students/register/route.ts
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'
 import { NextRequest, NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
 import { getAuthFromRequest } from '@/lib/auth'
@@ -34,16 +35,19 @@ export async function POST(req: NextRequest) {
       data: student,
     }, { status: 201 })
   } catch (error: unknown) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-      return NextResponse.json(
-        { success: false, error: 'Fingerprint ID already registered' },
-        { status: 409 }
-      )
-    }
-    console.error('POST /api/students/register error:', error)
+  if (
+    error instanceof PrismaClientKnownRequestError &&
+    error.code === 'P2002'
+  ) {
     return NextResponse.json(
-      { success: false, error: 'Failed to register student' },
-      { status: 500 }
+      { success: false, error: 'Fingerprint ID already registered' },
+      { status: 409 }
     )
   }
+
+  return NextResponse.json(
+    { success: false, error: 'Internal server error' },
+    { status: 500 }
+  )
+}
 }
