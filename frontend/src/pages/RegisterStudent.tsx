@@ -1,14 +1,18 @@
 import { useEffect, useState } from 'react'
 
 type Student = {
-  id: number
+  id: string
   name: string
   fingerprintId: string
   parentPhone: string
   createdAt: string
 }
 
-const API_URL = 'http://localhost:3000'
+const API_URL = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL
+
+if (!API_URL) {
+  throw new Error('Missing required environment variable: NEXT_PUBLIC_API_URL')
+}
 
 export default function RegisterStudent() {
   const [form, setForm] = useState({ name: '', fingerprintId: '', parentPhone: '' })
@@ -81,12 +85,15 @@ export default function RegisterStudent() {
                 required
               />
               <input
-                placeholder="Fingerprint ID"
+                placeholder="Fingerprint will auto assign after first scan"
                 value={form.fingerprintId}
                 onChange={(e) => setForm((prev) => ({ ...prev, fingerprintId: e.target.value.toUpperCase() }))}
                 style={inputStyle}
                 required
               />
+              <div style={{ color: '#94a3b8', fontSize: '12px', marginTop: '-6px' }}>
+                Fingerprint will auto assign after first scan.
+              </div>
               <input
                 placeholder="Parent Phone"
                 value={form.parentPhone}
@@ -115,7 +122,7 @@ export default function RegisterStudent() {
                 {students.map((student) => (
                   <div key={student.id} style={cardStyle}>
                     <div><strong>Name:</strong> {student.name}</div>
-                    <div><strong>Fingerprint ID:</strong> {student.fingerprintId}</div>
+                    <div><strong>Device User ID:</strong> {student.fingerprintId}</div>
                     <div><strong>Parent Phone:</strong> {student.parentPhone}</div>
                   </div>
                 ))}

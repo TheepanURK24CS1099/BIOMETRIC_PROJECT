@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { formatDate, formatTime, getStatusBadgeColor } from '@/lib/utils'
+import { io, Socket } from 'socket.io-client'
 
 interface Stats {
   totalStudents: number
@@ -59,6 +60,8 @@ export default function DashboardPage() {
   const [deletingStudentId, setDeletingStudentId] = useState<string | null>(null)
   const [showStudentModal, setShowStudentModal] = useState(false)
   const [savingStudent, setSavingStudent] = useState(false)
+  const [socketStatus, setSocketStatus] = useState<'connected' | 'connecting' | 'disconnected'>('disconnected')
+  const [deviceStatus, setDeviceStatus] = useState<'ONLINE' | 'OFFLINE' | 'UNKNOWN'>('UNKNOWN')
   const [studentForm, setStudentForm] = useState<StudentFormState>({
     name: '',
     roomNumber: '',
@@ -207,6 +210,36 @@ export default function DashboardPage() {
   }, [])
 
   useEffect(() => {
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL
+
+    if (!backendUrl) {
+      throw new Error('Missing required environment variable: NEXT_PUBLIC_API_URL')
+    }
+
+    const socket: Socket = io(backendUrl, {
+      transports: ['websocket'],
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 10,
+    })
+
+    setSocketStatus('connecting')
+
+    socket.on('connect', () => setSocketStatus('connected'))
+    socket.on('disconnect', () => setSocketStatus('disconnected'))
+    socket.on('device-status-update', (status) => {
+      setDeviceStatus(status?.device_status || status?.status || 'UNKNOWN')
+    })
+    socket.on('attendance-update', () => {
+      void Promise.all([fetchStats(), loadStudents()])
+    })
+
+    return () => {
+      socket.disconnect()
+    }
+  }, [])
+
+  useEffect(() => {
     document.body.style.overflow = showStudentModal ? 'hidden' : ''
     return () => {
       document.body.style.overflow = ''
@@ -232,6 +265,18 @@ export default function DashboardPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
+          <span
+            className="px-3 py-2 rounded-xl text-xs font-medium"
+            style={{ background: 'rgba(255,255,255,0.04)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}
+          >
+            Device stream: {socketStatus}
+          </span>
+          <span
+            className="px-3 py-2 rounded-xl text-xs font-medium"
+            style={{ background: 'rgba(255,255,255,0.04)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}
+          >
+            Device: {deviceStatus}
+          </span>
           <button
             onClick={triggerAutoAbsent}
             disabled={runningAbsent}
@@ -304,7 +349,7 @@ export default function DashboardPage() {
             <table className="w-full min-w-[760px]">
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                  {['Name', 'Room', 'Parent Phone', 'Fingerprint ID', 'Created Date', 'Actions'].map((heading) => (
+                  {['Name', 'Room', 'Parent Phone', 'Device User ID', 'Created Date', 'Actions'].map((heading) => (
                     <th
                       key={heading}
                       className="px-5 py-3.5 text-left text-xs font-600 tracking-wider uppercase"
@@ -514,7 +559,7 @@ export default function DashboardPage() {
                   />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Fingerprint ID</label>
+                  <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>Device User ID</label>
                   <input
                     className="input-base"
                     placeholder="FP008"

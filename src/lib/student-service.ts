@@ -9,7 +9,7 @@ export type CreateStudentInput = {
 }
 
 export async function createStudent(input: CreateStudentInput) {
-  return prisma.student.create({
+  return (prisma.student.create as any)({
     data: {
       name: input.name.trim(),
       roomNumber: input.roomNumber.trim(),
@@ -20,7 +20,7 @@ export async function createStudent(input: CreateStudentInput) {
 }
 
 export async function getStudents() {
-  return prisma.student.findMany({
+  return (prisma.student.findMany as any)({
     where: { isActive: true },
     orderBy: { createdAt: 'desc' },
   })

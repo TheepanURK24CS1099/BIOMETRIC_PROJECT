@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
     const search = searchParams.get('search') || ''
 
     const filteredStudents = search
-      ? students.filter((student) =>
+      ? (students as any[]).filter((student) =>
           [student.name, student.roomNumber, student.fingerprintId]
             .join(' ')
             .toLowerCase()

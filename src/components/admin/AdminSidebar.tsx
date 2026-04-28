@@ -14,6 +14,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: '◈' },
   { href: '/admin/attendance', label: 'Attendance', icon: '◷' },
+  { href: '/admin/device', label: 'Device', icon: '⌘' },
   { href: '/attendance', label: 'Scan Station', icon: '⬡' },
 ]
 

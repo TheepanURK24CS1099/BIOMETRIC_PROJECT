@@ -19,18 +19,18 @@ export async function GET(req: NextRequest) {
         date: { gte: from, lte: to },
       },
       include: { student: true },
-      orderBy: [{ date: 'asc' }, { student: { roomNumber: 'asc' } }],
+      orderBy: [{ date: 'asc' }],
     })
 
     if (format === 'csv') {
       const headers = ['Date', 'Student Name', 'Room Number', 'Parent Phone', 'Status', 'Time', 'Fingerprint ID']
-      const rows = records.map((r) => [
-        formatDate(r.date),
+      const rows = (records as any[]).map((r) => [
+        formatDate(new Date(r.date).toISOString().slice(0, 10)),
         r.student.name,
         r.student.roomNumber,
         r.student.parentPhone,
         r.status,
-        formatTime(r.time),
+        formatTime(r.time instanceof Date ? r.time.toISOString().slice(11, 19) : r.time),
         r.student.fingerprintId,
       ])
 

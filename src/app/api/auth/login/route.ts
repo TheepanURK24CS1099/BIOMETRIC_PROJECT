@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const admin = await prisma.admin.findUnique({ where: { username } })
+    const admin = await (prisma as any).admin.findUnique({ where: { username } })
 
     if (!admin) {
       return NextResponse.json(

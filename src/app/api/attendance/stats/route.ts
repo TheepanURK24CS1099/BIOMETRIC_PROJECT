@@ -15,11 +15,11 @@ export async function GET(req: NextRequest) {
 
     const [totalStudents, presentToday, absentToday, lateToday, recentAttendance] =
       await Promise.all([
-        prisma.student.count({ where: { isActive: true } }),
-        prisma.attendance.count({ where: { date, status: 'PRESENT' } }),
-        prisma.attendance.count({ where: { date, status: 'ABSENT' } }),
-        prisma.attendance.count({ where: { date, status: 'LATE' } }),
-        prisma.attendance.findMany({
+        (prisma.student.count as any)({ where: { isActive: true } }),
+        (prisma.attendance.count as any)({ where: { date, status: 'PRESENT' } }),
+        (prisma.attendance.count as any)({ where: { date, status: 'ABSENT' } }),
+        (prisma.attendance.count as any)({ where: { date, status: 'LATE' } }),
+        (prisma.attendance.findMany as any)({
           where: { date },
           include: { student: true },
           orderBy: { createdAt: 'desc' },
@@ -41,9 +41,9 @@ export async function GET(req: NextRequest) {
       d.setDate(d.getDate() - i)
       const dateStr = d.toISOString().split('T')[0]
       const [p, a, l] = await Promise.all([
-        prisma.attendance.count({ where: { date: dateStr, status: 'PRESENT' } }),
-        prisma.attendance.count({ where: { date: dateStr, status: 'ABSENT' } }),
-        prisma.attendance.count({ where: { date: dateStr, status: 'LATE' } }),
+        (prisma.attendance.count as any)({ where: { date: dateStr, status: 'PRESENT' } }),
+        (prisma.attendance.count as any)({ where: { date: dateStr, status: 'ABSENT' } }),
+        (prisma.attendance.count as any)({ where: { date: dateStr, status: 'LATE' } }),
       ])
       weeklyTrend.push({ date: dateStr, present: p, absent: a, late: l })
     }

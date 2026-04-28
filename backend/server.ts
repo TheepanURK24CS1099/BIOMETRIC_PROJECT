@@ -3,14 +3,16 @@ import cors from 'cors'
 import dotenv from 'dotenv'
 import studentsRouter from './routes/students'
 import prisma from './db'
+import { validateEnvironment } from './config/envCheck'
 
 dotenv.config()
+validateEnvironment()
 
 const app = express()
-const PORT = Number(process.env.PORT || 3000)
-const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:5173'
+const PORT = Number(process.env.PORT)
+const CORS_ORIGIN = process.env.CORS_ORIGIN as string
 
-app.use(cors({ origin: CORS_ORIGIN }))
+app.use(cors({ origin: CORS_ORIGIN, credentials: true }))
 app.use(express.json())
 
 app.get('/health', (_req, res) => {
@@ -27,7 +29,7 @@ async function main() {
   try {
     await prisma.$connect()
     app.listen(PORT, () => {
-      console.log(`Server running on http://localhost:${PORT}`)
+      console.log(`Server running on port ${PORT}`)
     })
   } catch (error) {
     console.error('Server startup failed:', error)

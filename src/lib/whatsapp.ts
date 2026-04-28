@@ -1,4 +1,13 @@
-const DEFAULT_WHATSAPP_SERVICE_URL = 'http://localhost:3001/send-whatsapp'
+const WHATSAPP_SERVICE_URL = process.env.WHATSAPP_SERVICE_URL
+const DEVICE_API_KEY = process.env.DEVICE_API_KEY
+
+if (!WHATSAPP_SERVICE_URL) {
+  throw new Error('Missing required environment variable: WHATSAPP_SERVICE_URL')
+}
+
+if (!DEVICE_API_KEY) {
+  throw new Error('Missing required environment variable: DEVICE_API_KEY')
+}
 
 function normalizePhone(phone: string): string {
   return phone.replace(/\D/g, '').replace(/^91/, '')
@@ -6,7 +15,6 @@ function normalizePhone(phone: string): string {
 
 export async function sendAttendanceWhatsApp(name: string, status: string, phone: string): Promise<boolean> {
   const provider = process.env.WHATSAPP_PROVIDER || 'fast2sms'
-  const serviceUrl = process.env.WHATSAPP_SERVICE_URL || DEFAULT_WHATSAPP_SERVICE_URL
 
   if (provider !== 'fast2sms') {
     console.log('⚠ WhatsApp provider disabled, skipping WhatsApp send')
@@ -14,10 +22,11 @@ export async function sendAttendanceWhatsApp(name: string, status: string, phone
   }
 
   try {
-    const response = await fetch(serviceUrl, {
+    const response = await fetch(WHATSAPP_SERVICE_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'x-device-key': DEVICE_API_KEY,
       },
       body: JSON.stringify({
         phone: normalizePhone(phone),

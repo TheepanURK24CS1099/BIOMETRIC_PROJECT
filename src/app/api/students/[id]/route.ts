@@ -19,7 +19,7 @@ export async function DELETE(req: NextRequest, { params }: RouteContext) {
   }
 
   try {
-    const student = await prisma.student.findUnique({
+    const student = await (prisma.student.findUnique as any)({
       where: { id },
       select: { id: true, name: true },
     })
@@ -29,8 +29,8 @@ export async function DELETE(req: NextRequest, { params }: RouteContext) {
     }
 
     await prisma.$transaction([
-      prisma.attendance.deleteMany({ where: { studentId: id } }),
-      prisma.student.delete({ where: { id } }),
+      (prisma.attendance.deleteMany as any)({ where: { studentId: id } }),
+      (prisma.student.delete as any)({ where: { id } }),
     ])
 
     return NextResponse.json({

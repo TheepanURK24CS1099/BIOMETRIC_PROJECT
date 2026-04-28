@@ -5,8 +5,9 @@ const router = Router()
 
 router.post('/register', async (req: Request, res: Response) => {
   try {
-    const { name, fingerprintId, parentPhone } = req.body as {
+    const { name, roomNumber, fingerprintId, parentPhone } = req.body as {
       name?: string
+      roomNumber?: string
       fingerprintId?: string
       parentPhone?: string
     }
@@ -18,7 +19,7 @@ router.post('/register', async (req: Request, res: Response) => {
       })
     }
 
-    const student = await createStudent({ name, fingerprintId, parentPhone })
+    const student = await createStudent({ name, roomNumber, fingerprintId, parentPhone })
 
     return res.status(201).json({
       success: true,

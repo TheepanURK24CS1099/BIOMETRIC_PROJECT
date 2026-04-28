@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
       prisma.attendance.findMany({
         where,
         include: { student: true },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { date: 'desc' },
         skip,
         take: limit,
       }),

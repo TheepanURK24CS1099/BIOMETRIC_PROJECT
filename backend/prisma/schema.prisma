@@ -7,25 +7,67 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Admin {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  password  String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model Student {
-  id           Int          @id @default(autoincrement())
-  name         String
-  fingerprintId String      @unique
-  parentPhone  String
-  createdAt    DateTime     @default(now())
-  attendance   Attendance[]
+  id             String       @id @default(cuid())
+  name           String
+  roomNumber     String
+  parentPhone    String
+  fingerprintId  String       @unique
+  fp_id          String?
+  device_user_id String?
+  photoUrl       String?
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  attendance     Attendance[]
 }
 
 model Attendance {
-  id        Int              @id @default(autoincrement())
-  studentId Int
-  student   Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  date      DateTime         @default(now())
-  status    AttendanceStatus
-  time      DateTime?
+  id            String            @id @default(cuid())
+  studentName   String?
+  studentId     String
+  student       Student           @relation(fields: [studentId], references: [id])
+  date          String            // YYYY-MM-DD format
+  status        String            @default("PRESENT")
+  time          String?           // HH:MM:SS format
+  notes         String?
+  device_log_id String?
+  device_id     String?
+  sessionId     String?
+  session       AttendanceSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@unique([studentId, date])
+  @@index([date])
+  @@index([studentId])
+  @@index([sessionId])
 }
 
-enum AttendanceStatus {
-  PRESENT
-  ABSENT
+model NotificationLog {
+  id          String   @id @default(cuid())
+  studentName String?
+  phone       String
+  message     String
+  status      String   // sent, failed, pending
+  provider    String   // fast2sms, twilio
+  createdAt   DateTime @default(now())
+}
+
+model AttendanceSession {
+  id         String       @id @default(uuid())
+  date       DateTime     @unique
+  isClosed   Boolean      @default(false)
+  closedAt   DateTime?
+  createdAt  DateTime     @default(now())
+  attendance Attendance[]
 }

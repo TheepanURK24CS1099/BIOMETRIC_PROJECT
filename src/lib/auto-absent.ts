@@ -32,7 +32,7 @@ export async function runAutoAbsent(date?: string): Promise<AutoAbsentResult> {
 
   try {
     // Get all active students
-    const allStudents = await prisma.student.findMany({
+    const allStudents = await (prisma.student.findMany as any)({
       where: { isActive: true },
     })
 
@@ -45,7 +45,7 @@ export async function runAutoAbsent(date?: string): Promise<AutoAbsentResult> {
     const attendedStudentIds = new Set(existingAttendance.map((a) => a.studentId))
 
     // Find students without attendance
-    const absentStudents = allStudents.filter((s) => !attendedStudentIds.has(s.id))
+    const absentStudents = (allStudents as any[]).filter((s: any) => !attendedStudentIds.has(s.id))
 
     console.log(
       `📊 Total: ${allStudents.length}, Present: ${attendedStudentIds.size}, Absent: ${absentStudents.length}`
@@ -60,8 +60,6 @@ export async function runAutoAbsent(date?: string): Promise<AutoAbsentResult> {
             date: targetDate,
             status: 'ABSENT',
             time: null,
-            notes: 'Auto-marked absent by system',
-            sessionId: session.id,
           },
         })
 

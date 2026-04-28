@@ -1,6 +1,7 @@
 'use client'
 // src/app/attendance/page.tsx
 import { useState, useRef, useEffect } from 'react'
+import { io, Socket } from 'socket.io-client'
 import { formatTime } from '@/lib/utils'
 import type { Student, Attendance } from '@/types'
 
@@ -18,6 +19,7 @@ export default function AttendanceScanPage() {
   const [scanState, setScanState] = useState<ScanState>('idle')
   const [result, setResult] = useState<ScanResult | null>(null)
   const [currentTime, setCurrentTime] = useState('')
+  const [liveScanStatus, setLiveScanStatus] = useState('🟢 Waiting for biometric scan...')
   const inputRef = useRef<HTMLInputElement>(null)
   const resetTimer = useRef<NodeJS.Timeout>()
 
@@ -36,6 +38,30 @@ export default function AttendanceScanPage() {
   useEffect(() => {
     inputRef.current?.focus()
   }, [scanState])
+
+  useEffect(() => {
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL
+
+    if (!backendUrl) {
+      throw new Error('Missing required environment variable: NEXT_PUBLIC_API_URL')
+    }
+
+    const socket: Socket = io(backendUrl, {
+      transports: ['websocket'],
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 10,
+    })
+
+    socket.on('attendance-update', () => {
+      setLiveScanStatus('✅ Attendance Marked — Present')
+      setTimeout(() => setLiveScanStatus('🟢 Waiting for biometric scan...'), 5000)
+    })
+
+    return () => {
+      socket.disconnect()
+    }
+  }, [])
 
   // Auto-reset after success/error
   function scheduleReset(delay = 5000) {
@@ -98,7 +124,7 @@ export default function AttendanceScanPage() {
       iconBg: 'rgba(196,77,239,0.15)',
       glowColor: 'rgba(196,77,239,0.3)',
       title: 'Ready to Scan',
-      subtitle: 'Enter your Fingerprint ID below',
+      subtitle: 'Place your finger on the biometric device. Attendance will appear automatically.',
     },
     scanning: {
       icon: '◈',
@@ -238,6 +264,10 @@ export default function AttendanceScanPage() {
             <p style={{ color: 'var(--text-secondary)' }}>{cfg.subtitle}</p>
           </div>
 
+          <div className="mb-6 text-center text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
+            {liveScanStatus}
+          </div>
+
           {/* Result card */}
           {result?.student && (
             <div className="card p-5 mb-6 animate-slide-up"
@@ -295,24 +325,20 @@ export default function AttendanceScanPage() {
                   autoComplete="off"
                   autoCapitalize="characters"
                   spellCheck={false}
-                  disabled={scanState === 'scanning'}
+                  disabled
                   style={{ fontSize: '1.5rem', letterSpacing: '0.15em' }}
                 />
+                <p className="mt-2 text-center text-xs" style={{ color: 'var(--text-muted)' }}>
+                  Manual entry is temporarily disabled. Testing mode remains in code.
+                </p>
               </div>
               <button
                 type="submit"
-                disabled={!fingerprintId.trim() || scanState === 'scanning'}
+                disabled
                 className="btn-primary w-full h-16 text-xl font-display font-700"
                 style={{ fontSize: '1.125rem' }}
               >
-                {scanState === 'scanning' ? (
-                  <span className="flex items-center justify-center gap-3">
-                    <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                    Scanning...
-                  </span>
-                ) : (
-                  '⬡  Mark Attendance'
-                )}
+                ⬡  Manual Testing Disabled
               </button>
             </form>
           )}

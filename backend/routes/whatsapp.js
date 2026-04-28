@@ -1,9 +1,10 @@
 const { Router } = require('express')
 const { sendAttendanceWhatsApp } = require('../services/whatsappService')
+const deviceAuth = require('../middleware/deviceAuth')
 
 const router = Router()
 
-router.post('/send-whatsapp', async (req, res) => {
+router.post('/send-whatsapp', deviceAuth, async (req, res) => {
   try {
     const { phone, name, status } = req.body || {}
 

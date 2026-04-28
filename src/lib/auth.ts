@@ -3,9 +3,13 @@ import { SignJWT, jwtVerify } from 'jose'
 import { cookies } from 'next/headers'
 import { NextRequest } from 'next/server'
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'fallback-secret-change-in-production'
-)
+const jwtSecret = process.env.JWT_SECRET
+
+if (!jwtSecret || !jwtSecret.trim()) {
+  throw new Error('Missing required environment variable: JWT_SECRET')
+}
+
+const JWT_SECRET = new TextEncoder().encode(jwtSecret)
 
 export interface JWTPayload {
   adminId: string
