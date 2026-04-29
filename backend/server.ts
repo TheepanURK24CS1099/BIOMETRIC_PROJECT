@@ -28,11 +28,12 @@ app.use((_req, res) => {
 async function main() {
   try {
     await prisma.$connect()
+    console.log('Database connection successful')
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`)
     })
   } catch (error) {
-    console.error('Server startup failed:', error)
+    console.error('Database connection failed:', error)
     process.exit(1)
   }
 }
