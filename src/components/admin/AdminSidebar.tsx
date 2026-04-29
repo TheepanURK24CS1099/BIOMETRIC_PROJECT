@@ -1,7 +1,7 @@
 'use client'
 // src/components/admin/AdminSidebar.tsx
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import toast from 'react-hot-toast'
 
@@ -20,15 +20,14 @@ const NAV_ITEMS: NavItem[] = [
 
 export default function AdminSidebar({ adminName }: { adminName: string }) {
   const pathname = usePathname()
-  const router = useRouter()
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [loggingOut, setLoggingOut] = useState(false)
 
   async function handleLogout() {
-    setLoggingOut(true)
-    await fetch('/api/auth/logout', { method: 'POST' })
+    localStorage.clear()
+    sessionStorage.clear()
+    void fetch('/api/auth/logout', { method: 'POST' }).catch(() => {})
     toast.success('Logged out')
-    router.push('/admin/login')
+    window.location.href = '/admin/login'
   }
 
   const SidebarContent = () => (
@@ -84,14 +83,13 @@ export default function AdminSidebar({ adminName }: { adminName: string }) {
         </div>
         <button
           onClick={handleLogout}
-          disabled={loggingOut}
           className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-all"
           style={{ color: 'var(--text-secondary)' }}
           onMouseEnter={e => (e.currentTarget.style.color = '#ef4444')}
           onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
         >
           <span>↩</span>
-          {loggingOut ? 'Logging out...' : 'Logout'}
+          Logout
         </button>
       </div>
     </div>

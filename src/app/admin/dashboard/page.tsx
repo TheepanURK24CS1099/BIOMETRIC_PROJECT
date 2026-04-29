@@ -296,14 +296,6 @@ export default function DashboardPage() {
             </span>
           )}
           <button
-            onClick={triggerAutoAbsent}
-            disabled={runningAbsent}
-            className="px-4 py-2 rounded-xl text-sm font-medium transition-all hover:opacity-80"
-            style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)' }}
-          >
-            {runningAbsent ? '⟳ Running...' : 'Run Auto-Absent ⚡'}
-          </button>
-          <button
             onClick={closeTodayAttendance}
             disabled={closingAttendance || stats?.todaySession?.isClosed}
             className="px-4 py-2 rounded-xl text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-80"
