@@ -371,7 +371,7 @@ export default function AttendanceScanPage() {
                   autoComplete="off"
                   autoCapitalize="characters"
                   spellCheck={false}
-                  disabled={deviceStatus !== 'ONLINE' || scanState === 'scanning'}
+                  disabled={deviceStatus !== 'ONLINE'}
                   style={{ fontSize: '1.5rem', letterSpacing: '0.15em' }}
                 />
                 <p className="mt-2 text-center text-xs" style={{ color: 'var(--text-muted)' }}>
@@ -380,7 +380,7 @@ export default function AttendanceScanPage() {
               </div>
               <button
                 type="submit"
-                disabled={deviceStatus !== 'ONLINE' || scanState === 'scanning'}
+                disabled={deviceStatus !== 'ONLINE'}
                 className="btn-primary w-full h-16 text-xl font-display font-700"
                 style={{ fontSize: '1.125rem' }}
               >
