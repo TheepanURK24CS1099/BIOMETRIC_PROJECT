@@ -31,29 +31,48 @@ type AttendanceNotificationStudent = {
 
 export async function sendAttendanceNotification(student: AttendanceNotificationStudent): Promise<void> {
   try {
-    const whatsappSent = await sendAttendanceWhatsApp(student.name, student.status, student.parentPhone)
+    console.log('WhatsApp attempt 1...')
+    const whatsappAttempt1 = await sendAttendanceWhatsApp(student.name, student.status, student.parentPhone)
 
-    if (whatsappSent) {
+    if (whatsappAttempt1) {
       console.log('WhatsApp sent successfully')
       return
     }
 
-    console.log('WhatsApp failed → sending SMS')
+    console.log('WhatsApp attempt 1 failed')
+    console.log('Retrying WhatsApp in 5 seconds...')
+    await new Promise((resolve) => setTimeout(resolve, 5000))
+
+    console.log('WhatsApp attempt 2...')
+    const whatsappAttempt2 = await sendAttendanceWhatsApp(student.name, student.status, student.parentPhone)
+
+    if (whatsappAttempt2) {
+      console.log('WhatsApp sent successfully')
+      return
+    }
+
+    console.log('WhatsApp failed twice → sending SMS')
     await sendAttendanceSMS({
       studentName: student.name,
       status: student.status,
       parentPhone: student.parentPhone,
       roomNumber: student.roomNumber ?? undefined,
     })
+    console.log('SMS fallback sent')
   } catch (error) {
     console.error('Notification error', error)
-    console.log('WhatsApp failed → sending SMS')
-    await sendAttendanceSMS({
-      studentName: student.name,
-      status: student.status,
-      parentPhone: student.parentPhone,
-      roomNumber: student.roomNumber ?? undefined,
-    })
+    try {
+      console.log('WhatsApp failed twice → sending SMS')
+      await sendAttendanceSMS({
+        studentName: student.name,
+        status: student.status,
+        parentPhone: student.parentPhone,
+        roomNumber: student.roomNumber ?? undefined,
+      })
+      console.log('SMS fallback sent')
+    } catch (smsError) {
+      console.error('Notification error', smsError)
+    }
   }
 }
 
