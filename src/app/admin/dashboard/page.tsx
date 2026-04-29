@@ -39,10 +39,13 @@ interface StudentFormState {
   fingerprintId: string
 }
 
-function StatCard({ label, value, sub, color }: { label: string; value: number | string; sub?: string; color: string }) {
+function StatCard({ label, value, sub, color, icon }: { label: string; value: number | string; sub?: string; color: string; icon?: string }) {
   return (
     <div className="card p-6 card-hover">
-      <p className="text-xs font-medium tracking-widest uppercase mb-3" style={{ color: 'var(--text-muted)' }}>{label}</p>
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs font-medium tracking-widest uppercase" style={{ color: 'var(--text-muted)' }}>{label}</p>
+        {icon && <span className="text-xl">{icon}</span>}
+      </div>
       <p className="font-display text-4xl font-800" style={{ color }}>{value}</p>
       {sub && <p className="text-xs mt-2" style={{ color: 'var(--text-secondary)' }}>{sub}</p>}
     </div>
@@ -61,7 +64,7 @@ export default function DashboardPage() {
   const [showStudentModal, setShowStudentModal] = useState(false)
   const [savingStudent, setSavingStudent] = useState(false)
   const [socketStatus, setSocketStatus] = useState<'connected' | 'connecting' | 'disconnected'>('disconnected')
-  const [deviceStatus, setDeviceStatus] = useState<'ONLINE' | 'OFFLINE' | 'UNKNOWN'>('UNKNOWN')
+  const [deviceStatus, setDeviceStatus] = useState<'ONLINE' | 'OFFLINE'>('OFFLINE')
   const [studentForm, setStudentForm] = useState<StudentFormState>({
     name: '',
     roomNumber: '',
@@ -240,7 +243,7 @@ export default function DashboardPage() {
     socket.on('connect', () => setSocketStatus('connected'))
     socket.on('disconnect', () => setSocketStatus('disconnected'))
     socket.on('device-status-update', (status) => {
-      setDeviceStatus(status?.device_status || status?.status || 'UNKNOWN')
+      setDeviceStatus(status?.device_status === 'ONLINE' || status?.status === 'ONLINE' ? 'ONLINE' : 'OFFLINE')
     })
     socket.on('attendance-update', () => {
       void Promise.all([fetchStats(), loadStudents()])
@@ -277,41 +280,44 @@ export default function DashboardPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <span
-            className="px-3 py-2 rounded-xl text-xs font-medium"
-            style={{ background: 'rgba(255,255,255,0.04)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}
-          >
-            Device stream: {socketStatus}
-          </span>
-          <span
-            className="px-3 py-2 rounded-xl text-xs font-medium"
-            style={{ background: 'rgba(255,255,255,0.04)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}
-          >
-            Device: {deviceStatus}
-          </span>
+          {deviceStatus === 'ONLINE' ? (
+            <span
+              className="px-3 py-2 rounded-xl text-xs font-medium"
+              style={{ background: 'rgba(16,185,129,0.15)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)' }}
+            >
+              🟢 Device: ONLINE
+            </span>
+          ) : (
+            <span
+              className="px-3 py-2 rounded-xl text-xs font-medium"
+              style={{ background: 'rgba(107,114,128,0.15)', color: '#9ca3af', border: '1px solid rgba(107,114,128,0.3)' }}
+            >
+              🔴 Device: OFFLINE
+            </span>
+          )}
           <button
             onClick={triggerAutoAbsent}
             disabled={runningAbsent}
-            className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
+            className="px-4 py-2 rounded-xl text-sm font-medium transition-all hover:opacity-80"
             style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)' }}
           >
-            {runningAbsent ? '⟳ Running...' : '⚡ Mark Auto-Absent'}
+            {runningAbsent ? '⟳ Running...' : 'Run Auto-Absent ⚡'}
           </button>
           <button
             onClick={closeTodayAttendance}
             disabled={closingAttendance || stats?.todaySession?.isClosed}
-            className="px-4 py-2 rounded-xl text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 rounded-xl text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-80"
             style={{ background: 'rgba(239,68,68,0.14)', color: '#f87171', border: '1px solid rgba(239,68,68,0.28)' }}
           >
-            {stats?.todaySession?.isClosed ? 'Attendance Closed' : closingAttendance ? 'Closing...' : 'Close Today Attendance'}
+            {stats?.todaySession?.isClosed ? 'Attendance Closed' : closingAttendance ? 'Closing...' : 'Close Attendance 🔒'}
           </button>
           <button
             onClick={resetTodayAttendance}
             disabled={resettingAttendance}
-            className="px-4 py-2 rounded-xl text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 rounded-xl text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-80"
             style={{ background: 'rgba(245,158,11,0.12)', color: '#fbbf24', border: '1px solid rgba(245,158,11,0.25)' }}
           >
-            {resettingAttendance ? 'Resetting...' : 'Reset Today'}
+            {resettingAttendance ? 'Resetting...' : 'Reset Attendance ♻'}
           </button>
           <Link href="/admin/attendance"
             className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
@@ -323,10 +329,10 @@ export default function DashboardPage() {
 
       {/* Stats grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Total Students" value={stats?.totalStudents ?? 0} color="#f1f5f9" />
-        <StatCard label="Present Today" value={stats?.presentToday ?? 0} sub={`+${stats?.lateToday ?? 0} late`} color="#10b981" />
-        <StatCard label="Absent Today" value={stats?.absentToday ?? 0} color="#ef4444" />
-        <StatCard label="Attendance Rate" value={`${stats?.attendanceRate ?? 0}%`} sub="including late" color="#c44def" />
+        <StatCard label="Total Students" value={stats?.totalStudents ?? 0} color="#f1f5f9" icon="👥" />
+        <StatCard label="Present Today" value={stats?.presentToday ?? 0} sub={`+${stats?.lateToday ?? 0} late`} color="#10b981" icon="✅" />
+        <StatCard label="Absent Today" value={stats?.absentToday ?? 0} color="#ef4444" icon="❌" />
+        <StatCard label="Attendance Rate" value={`${stats?.attendanceRate ?? 0}%`} sub="including late" color="#c44def" icon="📊" />
       </div>
 
       {/* Students Section */}
@@ -340,8 +346,8 @@ export default function DashboardPage() {
           </div>
           <button
             onClick={() => setShowStudentModal(true)}
-            className="px-5 py-3 rounded-xl text-sm font-semibold transition-all"
-            style={{ background: 'linear-gradient(135deg, #c44def, #a92fd2)', color: 'white', boxShadow: '0 10px 30px rgba(196,77,239,0.25)' }}
+            className="px-5 py-3 rounded-xl text-sm font-semibold transition-all hover:opacity-90"
+            style={{ background: 'linear-gradient(135deg, #c44def, #a92fd2)', color: 'white', boxShadow: '0 10px 20px rgba(196,77,239,0.2)' }}
           >
             + Register Student
           </button>
@@ -385,9 +391,9 @@ export default function DashboardPage() {
                           className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold"
                           style={{ background: 'linear-gradient(135deg, #c44def, #a92fd2)' }}
                         >
-                          {student.name.charAt(0)}
+                          {student.name.startsWith('Unknown') ? '?' : student.name.charAt(0)}
                         </div>
-                        <span className="font-medium text-white">{student.name}</span>
+                        <span className="font-medium text-white">{student.name.startsWith('Unknown') ? `Unknown (${student.fingerprintId})` : student.name}</span>
                       </div>
                     </td>
                     <td className="px-5 py-4 text-sm" style={{ color: 'var(--text-secondary)' }}>{student.roomNumber}</td>
@@ -405,7 +411,7 @@ export default function DashboardPage() {
                         type="button"
                         onClick={() => handleDeleteStudent(student)}
                         disabled={deletingStudentId === student.id}
-                        className="px-4 py-2 rounded-xl text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-4 py-2 rounded-xl text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-80"
                         style={{ background: 'rgba(239,68,68,0.14)', color: '#f87171', border: '1px solid rgba(239,68,68,0.28)' }}
                       >
                         {deletingStudentId === student.id ? 'Deleting...' : 'Delete'}
@@ -474,7 +480,7 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
                     style={{ background: 'linear-gradient(135deg, #c44def, #a92fd2)' }}>
-                    {record.student.name.charAt(0)}
+                    {record.student.name.startsWith('Unknown') ? '?' : record.student.name.charAt(0)}
                   </div>
                   <div>
                     <p className="text-sm font-medium text-white">{record.student.name}</p>

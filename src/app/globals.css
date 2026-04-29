@@ -70,20 +70,20 @@ h1, h2, h3, h4, h5, h6 {
 .card-hover:hover {
   border-color: var(--border-hover);
   background: var(--bg-card-hover);
-  box-shadow: 0 0 0 1px rgba(196, 77, 239, 0.1), 0 8px 32px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 0 0 1px rgba(196, 77, 239, 0.08), 0 8px 24px rgba(0, 0, 0, 0.32);
 }
 
 /* Glow effects */
 .glow-purple {
-  box-shadow: 0 0 20px rgba(196, 77, 239, 0.3), 0 0 60px rgba(196, 77, 239, 0.1);
+  box-shadow: 0 0 12px rgba(196, 77, 239, 0.22), 0 0 36px rgba(196, 77, 239, 0.08);
 }
 
 .glow-green {
-  box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.22);
 }
 
 .glow-red {
-  box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.22);
 }
 
 /* Scan animation */
@@ -102,18 +102,26 @@ h1, h2, h3, h4, h5, h6 {
   right: 0;
   height: 2px;
   background: linear-gradient(90deg, transparent, #c44def, transparent);
-  box-shadow: 0 0 12px 4px rgba(196, 77, 239, 0.6);
+  box-shadow: 0 0 10px 3px rgba(196, 77, 239, 0.38);
   animation: scanLine 2.5s ease-in-out infinite;
 }
 
-/* Fingerprint pulse */
+/* Fingerprint pulse animation */
 @keyframes fingerprintPulse {
-  0%, 100% { opacity: 0.4; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.05); }
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.08); }
 }
 
 .fingerprint-pulse {
   animation: fingerprintPulse 2s ease-in-out infinite;
+}
+
+button {
+  transition: transform 0.15s ease, box-shadow 0.2s ease, opacity 0.2s ease, border-color 0.2s ease;
+}
+
+button:hover:not(:disabled) {
+  transform: translateY(-1px);
 }
 
 /* Status badge */

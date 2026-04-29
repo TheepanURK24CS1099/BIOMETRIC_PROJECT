@@ -132,9 +132,9 @@ export default function AttendancePage() {
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
                           style={{ background: 'linear-gradient(135deg, #c44def, #a92fd2)' }}>
-                          {r.student.name.charAt(0)}
+                          {r.student.name.startsWith('Unknown') ? '?' : r.student.name.charAt(0)}
                         </div>
-                        <span className="text-sm font-medium text-white">{r.student.name}</span>
+                        <span className="text-sm font-medium text-white">{r.student.name.startsWith('Unknown') ? `Unknown (${r.student.fingerprintId})` : r.student.name}</span>
                       </div>
                     </td>
                     <td className="px-5 py-4 text-sm" style={{ color: 'var(--text-secondary)' }}>{r.student.roomNumber}</td>

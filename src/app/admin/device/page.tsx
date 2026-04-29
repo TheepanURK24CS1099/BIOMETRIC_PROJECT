@@ -137,6 +137,8 @@ export default function DevicePage() {
     }
   }, [])
 
+  const isOnline = settings.device_status === 'ONLINE'
+
   if (loading) {
     return <div className="h-64 flex items-center justify-center text-white">Loading device settings...</div>
   }
@@ -149,6 +151,21 @@ export default function DevicePage() {
           Enroll fingerprint on biometric device.
         </p>
       </div>
+
+      {!isOnline ? (
+        <div className="card p-10 text-center space-y-3">
+          <div className="mx-auto w-14 h-14 rounded-full flex items-center justify-center" style={{ background: 'rgba(107,114,128,0.15)', color: '#9ca3af' }}>
+            🔴
+          </div>
+          <div className="text-xl font-display font-700 text-white">No device connected</div>
+          <p className="text-sm max-w-md mx-auto" style={{ color: 'var(--text-secondary)' }}>
+            Connect biometric device to start attendance
+          </p>
+          <span className="inline-flex px-3 py-1.5 rounded-full text-xs font-medium" style={{ background: 'rgba(107,114,128,0.15)', color: '#9ca3af', border: '1px solid rgba(107,114,128,0.3)' }}>
+            🔴 Device: OFFLINE
+          </span>
+        </div>
+      ) : (
 
       <div className="card p-6 space-y-4">
         <div>
@@ -191,7 +208,7 @@ export default function DevicePage() {
             <button
               onClick={saveSettings}
               disabled={saving}
-              className="px-4 py-2 rounded-xl text-sm font-medium"
+              className="px-4 py-2 rounded-xl text-sm font-medium transition-all hover:opacity-80"
               style={{ background: 'rgba(196,77,239,0.16)', color: '#d8b4fe', border: '1px solid rgba(196,77,239,0.3)' }}
             >
               {saving ? 'Saving...' : 'Save Device'}
@@ -199,7 +216,7 @@ export default function DevicePage() {
             <button
               onClick={syncUsers}
               disabled={syncingUsers}
-              className="px-4 py-2 rounded-xl text-sm font-medium"
+              className="px-4 py-2 rounded-xl text-sm font-medium transition-all hover:opacity-80"
               style={{ background: 'rgba(16,185,129,0.16)', color: '#6ee7b7', border: '1px solid rgba(16,185,129,0.3)' }}
             >
               {syncingUsers ? 'Syncing...' : 'Sync Users'}
@@ -207,7 +224,7 @@ export default function DevicePage() {
             <button
               onClick={syncAttendance}
               disabled={syncingAttendance}
-              className="px-4 py-2 rounded-xl text-sm font-medium"
+              className="px-4 py-2 rounded-xl text-sm font-medium transition-all hover:opacity-80"
               style={{ background: 'rgba(59,130,246,0.16)', color: '#93c5fd', border: '1px solid rgba(59,130,246,0.3)' }}
             >
               {syncingAttendance ? 'Syncing...' : 'Sync Attendance'}
@@ -215,6 +232,7 @@ export default function DevicePage() {
           </div>
         </div>
       </div>
+      )}
     </div>
   )
 }

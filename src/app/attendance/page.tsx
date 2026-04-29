@@ -2,6 +2,7 @@
 // src/app/attendance/page.tsx
 import { useState, useRef, useEffect } from 'react'
 import { io, Socket } from 'socket.io-client'
+import toast from 'react-hot-toast'
 import { formatTime } from '@/lib/utils'
 import type { Student, Attendance } from '@/types'
 
@@ -19,7 +20,8 @@ export default function AttendanceScanPage() {
   const [scanState, setScanState] = useState<ScanState>('idle')
   const [result, setResult] = useState<ScanResult | null>(null)
   const [currentTime, setCurrentTime] = useState('')
-  const [liveScanStatus, setLiveScanStatus] = useState('🟢 Waiting for biometric scan...')
+  const [liveScanStatus, setLiveScanStatus] = useState('🟢 Place your finger on the device')
+  const [deviceStatus, setDeviceStatus] = useState<'ONLINE' | 'OFFLINE'>('OFFLINE')
   const inputRef = useRef<HTMLInputElement>(null)
   const resetTimer = useRef<NodeJS.Timeout>()
 
@@ -55,7 +57,11 @@ export default function AttendanceScanPage() {
 
     socket.on('attendance-update', () => {
       setLiveScanStatus('✅ Attendance Marked — Present')
-      setTimeout(() => setLiveScanStatus('🟢 Waiting for biometric scan...'), 5000)
+      setTimeout(() => setLiveScanStatus('🟢 Place your finger on the device'), 5000)
+    })
+
+    socket.on('device-status-update', (status) => {
+      setDeviceStatus(status?.device_status || status?.status || 'OFFLINE')
     })
 
     return () => {
@@ -96,6 +102,11 @@ export default function AttendanceScanPage() {
       } else if (data.success) {
         setScanState('success')
         setResult({ student: data.data.student, attendance: data.data.attendance, message: data.message })
+        toast.success(`✅ Attendance marked for ${data.data.student?.name || 'student'}`)
+        toast.success('📩 Notification sent')
+        if (String(data.message || '').toLowerCase().includes('whatsapp') && String(data.message || '').toLowerCase().includes('sms')) {
+          toast('⚠ WhatsApp failed → SMS sent', { icon: '⚠' })
+        }
         scheduleReset(5000)
       } else {
         setScanState('error')
@@ -123,8 +134,8 @@ export default function AttendanceScanPage() {
       iconColor: '#c44def',
       iconBg: 'rgba(196,77,239,0.15)',
       glowColor: 'rgba(196,77,239,0.3)',
-      title: 'Ready to Scan',
-      subtitle: 'Place your finger on the biometric device. Attendance will appear automatically.',
+      title: 'Ready for Fingerprint Scan',
+      subtitle: 'Place your finger on the device',
     },
     scanning: {
       icon: '◈',
@@ -222,7 +233,7 @@ export default function AttendanceScanPage() {
               {/* Fingerprint icon */}
               <svg
                 viewBox="0 0 64 64"
-                className="w-16 h-16 transition-all duration-500"
+                className={`w-16 h-16 transition-all duration-500 ${scanState === 'idle' ? 'fingerprint-pulse' : ''}`}
                 style={{ color: cfg.iconColor, opacity: scanState === 'scanning' ? 0.6 : 1 }}
                 fill="none"
                 stroke="currentColor"
@@ -268,6 +279,25 @@ export default function AttendanceScanPage() {
             {liveScanStatus}
           </div>
 
+          {/* Device Status Badge */}
+          <div className="mb-6 text-center">
+            {deviceStatus === 'ONLINE' ? (
+              <span
+                className="inline-block px-3 py-1.5 rounded-full text-xs font-medium"
+                style={{ background: 'rgba(16,185,129,0.15)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)' }}
+              >
+                🟢 Device Status: ONLINE
+              </span>
+            ) : (
+              <span
+                className="inline-block px-3 py-1.5 rounded-full text-xs font-medium"
+                style={{ background: 'rgba(107,114,128,0.15)', color: '#9ca3af', border: '1px solid rgba(107,114,128,0.3)' }}
+              >
+                🔴 Device Status: OFFLINE
+              </span>
+            )}
+          </div>
+
           {/* Result card */}
           {result?.student && (
             <div className="card p-5 mb-6 animate-slide-up"
@@ -275,10 +305,12 @@ export default function AttendanceScanPage() {
               <div className="flex items-center gap-4">
                 <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-bold flex-shrink-0"
                   style={{ background: 'linear-gradient(135deg, #c44def, #a92fd2)' }}>
-                  {result.student.name.charAt(0)}
+                  {result.student.name.startsWith('Unknown') ? '?' : result.student.name.charAt(0)}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-display text-xl font-700 text-white">{result.student.name}</p>
+                  <p className="font-display text-xl font-700 text-white">
+                    {result.student.name.startsWith('Unknown') ? `Unknown (${result.student.fingerprintId})` : result.student.name}
+                  </p>
                   <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
                     Room {result.student.roomNumber}
                   </p>
@@ -329,7 +361,7 @@ export default function AttendanceScanPage() {
                   style={{ fontSize: '1.5rem', letterSpacing: '0.15em' }}
                 />
                 <p className="mt-2 text-center text-xs" style={{ color: 'var(--text-muted)' }}>
-                  Manual entry is temporarily disabled. Testing mode remains in code.
+                  Scan fingerprint to mark attendance
                 </p>
               </div>
               <button
@@ -338,7 +370,7 @@ export default function AttendanceScanPage() {
                 className="btn-primary w-full h-16 text-xl font-display font-700"
                 style={{ fontSize: '1.125rem' }}
               >
-                ⬡  Manual Testing Disabled
+                ⬡ Biometric Device Ready
               </button>
             </form>
           )}
