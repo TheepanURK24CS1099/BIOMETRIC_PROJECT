@@ -272,7 +272,7 @@ router.post('/api/device/save', deviceAuth, async (req, res) => {
     const { device_name, device_ip, device_port } = req.body || {}
     const settings = await saveDeviceSettings({ device_name, device_ip, device_port })
 
-    const deviceMode = String(process.env.DEVICE_MODE || 'mock').toLowerCase()
+    const deviceMode = String(process.env.DEVICE_MODE || 'disabled').toLowerCase()
     if (deviceMode !== 'mock') {
       if (settings.device_ip) {
         await connectDevice(settings.device_ip, settings.device_port)

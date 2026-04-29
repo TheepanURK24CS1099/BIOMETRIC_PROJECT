@@ -43,7 +43,7 @@ async function runHeartbeat() {
     emitToServer('device-status-update', {
       device_status: 'OFFLINE',
       connected: false,
-      mode: process.env.DEVICE_MODE || 'mock',
+      mode: process.env.DEVICE_MODE || 'disabled',
       last_checked_at: new Date().toISOString(),
       error: error instanceof Error ? error.message : 'Unknown error',
     })

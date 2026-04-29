@@ -3,7 +3,7 @@ const path = require('path')
 
 const SETTINGS_FILE = path.join(__dirname, '..', 'data', 'device-settings.json')
 const STATUS_FILE = path.join(__dirname, '..', 'data', 'device-status.json')
-const DEVICE_MODE = String(process.env.DEVICE_MODE || 'mock').toLowerCase()
+const DEVICE_MODE = String(process.env.DEVICE_MODE || 'disabled').toLowerCase()
 const DEFAULT_DEVICE_PORT = Number(process.env.DEVICE_PORT || 4370)
 
 const DEFAULT_SETTINGS = {
