@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { markAttendanceByFingerprint } from '@/lib/attendance'
-import { sendAttendanceSMS } from '@/lib/sms'
-import { sendWhatsApp } from '@/lib/whatsapp'
+import { markAttendanceByFingerprint, sendAttendanceNotification } from '@/lib/attendance'
 
 export async function POST(req: NextRequest) {
   try {
@@ -22,30 +20,12 @@ export async function POST(req: NextRequest) {
       const status = attendance.status
 
       if (status === 'PRESENT') {
-        const whatsappSent = await sendWhatsApp({
-          phone: student.parentPhone,
-          message: `✅ ${student.name} (Room ${student.roomNumber}) marked PRESENT on ${new Date().toLocaleDateString()}`,
-        }).catch((err) => {
-          console.error('WhatsApp error:', err)
-          return false
+        await sendAttendanceNotification({
+          name: student.name,
+          status: 'PRESENT',
+          parentPhone: student.parentPhone,
+          roomNumber: student.roomNumber,
         })
-
-        if (!whatsappSent) {
-          console.log('⚠ WhatsApp failed → SMS fallback')
-          const smsResult = await sendAttendanceSMS({
-            studentName: student.name,
-            status: 'PRESENT',
-            parentPhone: student.parentPhone,
-            date: new Date().toISOString().split('T')[0],
-            time: null,
-          })
-
-          if (smsResult.success) {
-            console.log('✅ SMS sent')
-          } else {
-            console.log('⚠ SMS failed')
-          }
-        }
       }
     }
 

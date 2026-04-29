@@ -2,6 +2,8 @@
 import prisma from '@/lib/prisma'
 import { ensureTodaySessionExists, getTodaySession } from '@/lib/createDailySession'
 import { getCurrentTime, getTodayDate, isLate } from '@/lib/utils'
+import { sendAttendanceSMS } from '@/lib/sms'
+import { sendAttendanceWhatsApp } from '@/lib/whatsapp'
 
 type AttendanceMarkResult =
   | {
@@ -19,6 +21,41 @@ type AttendanceMarkResult =
       error: string
       data?: Record<string, unknown>
     }
+
+type AttendanceNotificationStudent = {
+  name: string
+  status: 'PRESENT' | 'ABSENT'
+  parentPhone: string
+  roomNumber?: string | null
+}
+
+export async function sendAttendanceNotification(student: AttendanceNotificationStudent): Promise<void> {
+  try {
+    const whatsappSent = await sendAttendanceWhatsApp(student.name, student.status, student.parentPhone)
+
+    if (whatsappSent) {
+      console.log('WhatsApp sent successfully')
+      return
+    }
+
+    console.log('WhatsApp failed → sending SMS')
+    await sendAttendanceSMS({
+      studentName: student.name,
+      status: student.status,
+      parentPhone: student.parentPhone,
+      roomNumber: student.roomNumber ?? undefined,
+    })
+  } catch (error) {
+    console.error('Notification error', error)
+    console.log('WhatsApp failed → sending SMS')
+    await sendAttendanceSMS({
+      studentName: student.name,
+      status: student.status,
+      parentPhone: student.parentPhone,
+      roomNumber: student.roomNumber ?? undefined,
+    })
+  }
+}
 
 /**
  * Shared attendance marking logic used by both /api/attendance/scan and /api/attendance/mark.
