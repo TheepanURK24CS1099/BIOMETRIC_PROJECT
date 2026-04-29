@@ -51,8 +51,8 @@ export default function AttendanceScanPage() {
     const socket: Socket = io(backendUrl, {
       transports: ['websocket'],
       reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionAttempts: 10,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 3000,
     })
 
     socket.on('attendance-update', () => {
@@ -60,8 +60,17 @@ export default function AttendanceScanPage() {
       setTimeout(() => setLiveScanStatus('🟢 Place your finger on the device'), 5000)
     })
 
+    socket.on('disconnect', () => {
+      setDeviceStatus('OFFLINE')
+    })
+
     socket.on('device-status-update', (status) => {
-      setDeviceStatus(status?.device_status || status?.status || 'OFFLINE')
+      if (!status || status.device_status !== 'ONLINE') {
+        setDeviceStatus('OFFLINE')
+        return
+      }
+
+      setDeviceStatus('ONLINE')
     })
 
     return () => {
@@ -82,6 +91,10 @@ export default function AttendanceScanPage() {
 
   async function handleScan(e: React.FormEvent) {
     e.preventDefault()
+    if (deviceStatus !== 'ONLINE') {
+      toast.error('Device is offline')
+      return
+    }
     if (!fingerprintId.trim()) return
 
     setScanState('scanning')
@@ -113,7 +126,8 @@ export default function AttendanceScanPage() {
         setResult({ message: data.error || 'Scan failed' })
         scheduleReset(4000)
       }
-    } catch {
+    } catch (error) {
+      console.error('API Error:', error)
       setScanState('error')
       setResult({ message: 'Connection error. Please try again.' })
       scheduleReset(4000)
@@ -357,20 +371,20 @@ export default function AttendanceScanPage() {
                   autoComplete="off"
                   autoCapitalize="characters"
                   spellCheck={false}
-                  disabled
+                  disabled={deviceStatus !== 'ONLINE' || scanState === 'scanning'}
                   style={{ fontSize: '1.5rem', letterSpacing: '0.15em' }}
                 />
                 <p className="mt-2 text-center text-xs" style={{ color: 'var(--text-muted)' }}>
-                  Scan fingerprint to mark attendance
+                  {deviceStatus === 'ONLINE' ? 'Scan fingerprint to mark attendance' : 'Device offline'}
                 </p>
               </div>
               <button
                 type="submit"
-                disabled
+                disabled={deviceStatus !== 'ONLINE' || scanState === 'scanning'}
                 className="btn-primary w-full h-16 text-xl font-display font-700"
                 style={{ fontSize: '1.125rem' }}
               >
-                ⬡ Biometric Device Ready
+                {deviceStatus === 'ONLINE' ? '⬡ Biometric Device Ready' : '⬡ Device Offline'}
               </button>
             </form>
           )}

@@ -57,7 +57,6 @@ export default function DashboardPage() {
   const [students, setStudents] = useState<DashboardStudent[]>([])
   const [loading, setLoading] = useState(true)
   const [studentsLoading, setStudentsLoading] = useState(true)
-  const [runningAbsent, setRunningAbsent] = useState(false)
   const [closingAttendance, setClosingAttendance] = useState(false)
   const [resettingAttendance, setResettingAttendance] = useState(false)
   const [deletingStudentId, setDeletingStudentId] = useState<string | null>(null)
@@ -73,6 +72,8 @@ export default function DashboardPage() {
   })
 
   async function fetchStats() {
+    if (loading && stats) return
+    setLoading(true)
     try {
       const res = await fetch('/api/attendance/stats', {
         method: 'GET',
@@ -80,7 +81,8 @@ export default function DashboardPage() {
       })
       const data = await res.json()
       if (data.success) setStats(data.data)
-    } catch {
+    } catch (error) {
+      console.error('API Error:', error)
       toast.error('Failed to load dashboard')
     } finally {
       setLoading(false)
@@ -88,6 +90,7 @@ export default function DashboardPage() {
   }
 
   async function loadStudents() {
+    if (studentsLoading && students.length > 0) return
     setStudentsLoading(true)
     try {
       const res = await fetch('/api/students', {
@@ -100,7 +103,8 @@ export default function DashboardPage() {
       } else {
         toast.error(data.error || 'Failed to load students')
       }
-    } catch {
+    } catch (error) {
+      console.error('API Error:', error)
       toast.error('Failed to load students')
     } finally {
       setStudentsLoading(false)
@@ -121,35 +125,16 @@ export default function DashboardPage() {
       } else {
         toast.error(data.error || 'Failed to delete student')
       }
-    } catch {
+    } catch (error) {
+      console.error('API Error:', error)
       toast.error('Failed to delete student')
     } finally {
       setDeletingStudentId(null)
     }
   }
 
-  async function triggerAutoAbsent() {
-    setRunningAbsent(true)
-    try {
-      const res = await fetch('/api/attendance/auto-absent', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: '{}',
-      })
-      const data = await res.json()
-      if (data.success) {
-        toast.success(data.message)
-        fetchStats()
-      } else toast.error(data.error)
-    } catch {
-      toast.error('Failed to run auto-absent')
-    } finally {
-      setRunningAbsent(false)
-    }
-  }
-
   async function closeTodayAttendance() {
+    if (closingAttendance) return
     if (!confirm('Close today\'s attendance? No more marks will be allowed after this.')) return
 
     setClosingAttendance(true)
@@ -163,7 +148,8 @@ export default function DashboardPage() {
       } else {
         toast.error(data.error || 'Failed to close attendance')
       }
-    } catch {
+    } catch (error) {
+      console.error('API Error:', error)
       toast.error('Failed to close attendance')
     } finally {
       setClosingAttendance(false)
@@ -171,6 +157,7 @@ export default function DashboardPage() {
   }
 
   async function resetTodayAttendance() {
+    if (resettingAttendance) return
     if (!confirm('Reset today\'s attendance? This will clear all marks for today and reopen the session.')) return
 
     setResettingAttendance(true)
@@ -184,7 +171,8 @@ export default function DashboardPage() {
       } else {
         toast.error(data.error || 'Failed to reset attendance')
       }
-    } catch {
+    } catch (error) {
+      console.error('API Error:', error)
       toast.error('Failed to reset attendance')
     } finally {
       setResettingAttendance(false)
@@ -193,6 +181,7 @@ export default function DashboardPage() {
 
   async function handleSaveStudent(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (savingStudent) return
     setSavingStudent(true)
 
     try {
@@ -213,7 +202,8 @@ export default function DashboardPage() {
       } else {
         toast.error(data.error || 'Failed to register student')
       }
-    } catch {
+    } catch (error) {
+      console.error('API Error:', error)
       toast.error('Failed to register student')
     } finally {
       setSavingStudent(false)
@@ -234,16 +224,24 @@ export default function DashboardPage() {
     const socket: Socket = io(backendUrl, {
       transports: ['websocket'],
       reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionAttempts: 10,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 3000,
     })
 
     setSocketStatus('connecting')
 
     socket.on('connect', () => setSocketStatus('connected'))
-    socket.on('disconnect', () => setSocketStatus('disconnected'))
+    socket.on('disconnect', () => {
+      setSocketStatus('disconnected')
+      setDeviceStatus('OFFLINE')
+    })
     socket.on('device-status-update', (status) => {
-      setDeviceStatus(status?.device_status === 'ONLINE' || status?.status === 'ONLINE' ? 'ONLINE' : 'OFFLINE')
+      if (!status || status.device_status !== 'ONLINE') {
+        setDeviceStatus('OFFLINE')
+        return
+      }
+
+      setDeviceStatus('ONLINE')
     })
     socket.on('attendance-update', () => {
       void Promise.all([fetchStats(), loadStudents()])
@@ -351,9 +349,9 @@ export default function DashboardPage() {
               <div className="w-7 h-7 rounded-full border-2 border-purple-500 border-t-transparent animate-spin" />
             </div>
           ) : students.length === 0 ? (
-            <div className="text-center py-12" style={{ color: 'var(--text-muted)' }}>
+            <div className="flex flex-col items-center justify-center py-12 text-center min-h-[180px]" style={{ color: 'var(--text-muted)' }}>
               <div className="text-4xl mb-3">◉</div>
-              <p>No students registered yet</p>
+              <p>No attendance data available</p>
             </div>
           ) : (
             <table className="w-full min-w-[760px]">
@@ -459,9 +457,9 @@ export default function DashboardPage() {
         </div>
 
         {!stats?.recentAttendance?.length ? (
-          <div className="text-center py-10" style={{ color: 'var(--text-muted)' }}>
+          <div className="flex flex-col items-center justify-center py-10 text-center min-h-[180px]" style={{ color: 'var(--text-muted)' }}>
             <div className="text-3xl mb-3">◷</div>
-            <p>No attendance marked today</p>
+            <p>No attendance data available</p>
           </div>
         ) : (
           <div className="space-y-2">

@@ -16,6 +16,7 @@ export default function AttendancePage() {
   const [exporting, setExporting] = useState(false)
 
   async function fetchRecords() {
+    if (loading && records.length > 0) return
     setLoading(true)
     try {
       const params = new URLSearchParams({ date, limit: '200' })
@@ -23,13 +24,14 @@ export default function AttendancePage() {
       const res = await fetch(`/api/attendance?${params}`)
       const data = await res.json()
       if (data.success) { setRecords(data.data); setTotal(data.total) }
-    } catch { toast.error('Failed to load attendance') }
+    } catch (error) { console.error('API Error:', error); toast.error('Failed to load attendance') }
     finally { setLoading(false) }
   }
 
   useEffect(() => { fetchRecords() }, [date, statusFilter])
 
   async function handleExport() {
+    if (exporting) return
     setExporting(true)
     try {
       const res = await fetch(`/api/attendance/export?from=${date}&to=${date}&format=csv`)
@@ -42,7 +44,7 @@ export default function AttendancePage() {
       a.click()
       URL.revokeObjectURL(url)
       toast.success('Exported!')
-    } catch { toast.error('Export failed') }
+    } catch (error) { console.error('API Error:', error); toast.error('Export failed') }
     finally { setExporting(false) }
   }
 
@@ -108,9 +110,9 @@ export default function AttendancePage() {
             <div className="w-7 h-7 rounded-full border-2 border-purple-500 border-t-transparent animate-spin" />
           </div>
         ) : records.length === 0 ? (
-          <div className="text-center py-16" style={{ color: 'var(--text-muted)' }}>
+          <div className="flex flex-col items-center justify-center py-16 text-center min-h-[220px]" style={{ color: 'var(--text-muted)' }}>
             <div className="text-4xl mb-3">◷</div>
-            <p>No attendance records for {formatDate(date)}</p>
+            <p>No attendance data available</p>
           </div>
         ) : (
           <div className="overflow-x-auto">

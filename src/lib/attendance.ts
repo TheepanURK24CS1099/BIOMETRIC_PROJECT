@@ -132,47 +132,25 @@ export async function markAttendanceByFingerprint(fingerprintId: string | null |
     return { success: false, statusCode: 403, error: 'Attendance already closed' }
   }
 
-  const today = getTodayDate()
+  const todayDate = getTodayDate()
   const currentTime = getCurrentTime()
 
-  const existingRecord = await prisma.attendance.findFirst({
-    where: { studentId: student.id, date: today } as any,
+  const existing = await prisma.attendance.findFirst({
+    where: {
+      studentId: student.id,
+      date: todayDate,
+    },
   })
 
-  if (existingRecord) {
-    if (existingRecord.status === 'ABSENT') {
-      const correctedAttendance = await prisma.attendance.update({
-        where: { id: existingRecord.id },
-        data: {
-          status: 'PRESENT' as any,
-          time: currentTime,
-        },
-      })
-
-      await prisma.$executeRaw`
-        UPDATE "Attendance"
-        SET "studentName" = ${student.name}
-        WHERE "id" = ${correctedAttendance.id}
-      `
-
-      console.log(`Marked attendance for fingerprintId: ${normalizedFingerprintId}`)
-
-      return {
-        success: true,
-        statusCode: 200,
-        message: `Attendance corrected to PRESENT for ${student.name}`,
-        data: { student, attendance: correctedAttendance },
-      }
-    }
-
+  if (existing) {
+    console.log(`⚠ Duplicate attendance prevented for ${student.fingerprintId}`)
     return {
-      success: false,
-      statusCode: 409,
-      error: 'Attendance already marked for today',
+      success: true,
+      statusCode: 200,
+      message: 'Already marked today',
       data: {
         student,
-        attendance: existingRecord,
-        alreadyMarked: true,
+        attendance: existing,
       },
     }
   }
@@ -182,7 +160,7 @@ export async function markAttendanceByFingerprint(fingerprintId: string | null |
   const attendance = await prisma.attendance.create({
     data: {
       studentId: student.id,
-      date: today,
+      date: todayDate,
       status: status as any,
       time: currentTime,
     },
