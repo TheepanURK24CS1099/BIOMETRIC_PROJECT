@@ -1,14 +1,3 @@
-const WHATSAPP_SERVICE_URL = process.env.WHATSAPP_SERVICE_URL
-const DEVICE_API_KEY = process.env.DEVICE_API_KEY
-
-if (!WHATSAPP_SERVICE_URL) {
-  throw new Error('Missing required environment variable: WHATSAPP_SERVICE_URL')
-}
-
-if (!DEVICE_API_KEY) {
-  throw new Error('Missing required environment variable: DEVICE_API_KEY')
-}
-
 function normalizePhone(phone: string): string {
   return phone.replace(/\D/g, '').replace(/^91/, '')
 }
@@ -20,6 +9,13 @@ type SendWhatsAppParams = {
 
 export async function sendWhatsApp({ phone, message }: SendWhatsAppParams): Promise<boolean> {
   const provider = process.env.WHATSAPP_PROVIDER || 'fast2sms'
+  const WHATSAPP_SERVICE_URL = process.env.WHATSAPP_SERVICE_URL
+  const DEVICE_API_KEY = process.env.DEVICE_API_KEY
+
+  if (!WHATSAPP_SERVICE_URL || !DEVICE_API_KEY) {
+    console.log('⚠ WhatsApp configuration missing, skipping WhatsApp send')
+    return false
+  }
 
   if (provider !== 'fast2sms') {
     console.log('⚠ WhatsApp provider disabled, skipping WhatsApp send')
@@ -60,6 +56,13 @@ export async function sendWhatsApp({ phone, message }: SendWhatsAppParams): Prom
 
 export async function sendAttendanceWhatsApp(name: string, status: string, phone: string): Promise<boolean> {
   const provider = process.env.WHATSAPP_PROVIDER || 'fast2sms'
+  const WHATSAPP_SERVICE_URL = process.env.WHATSAPP_SERVICE_URL
+  const DEVICE_API_KEY = process.env.DEVICE_API_KEY
+
+  if (!WHATSAPP_SERVICE_URL || !DEVICE_API_KEY) {
+    console.log('⚠ WhatsApp configuration missing, skipping WhatsApp send')
+    return false
+  }
 
   if (provider !== 'fast2sms') {
     console.log('⚠ WhatsApp provider disabled, skipping WhatsApp send')

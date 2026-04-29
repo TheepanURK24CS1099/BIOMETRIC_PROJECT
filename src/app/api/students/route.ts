@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'
+import { createStudent } from '@/lib/student-service'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -31,22 +32,14 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { name, roomNumber, parentPhone, fingerprintId } = body
 
-    if (!name || !roomNumber || !parentPhone || !fingerprintId) {
+    if (!name || !roomNumber || !parentPhone) {
       return NextResponse.json(
-        { success: false, error: 'All fields are required' },
+        { success: false, error: 'Name, room number, and parent phone are required' },
         { status: 400 }
       )
     }
 
-    const student = await prisma.student.create({
-      data: {
-        name,
-        roomNumber,
-        parentPhone,
-        fingerprintId,
-        isActive: true,
-      },
-    })
+    const student = await createStudent({ name, roomNumber, parentPhone, fingerprintId })
 
     return NextResponse.json(
       {

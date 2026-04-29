@@ -176,8 +176,8 @@ async function getUsersFromDevice() {
     return {
       success: true,
       data: [
-        { fp_id: 'FP008', device_user_id: '1008', name: 'Sample Student 1' },
-        { fp_id: 'FP009', device_user_id: '1009', name: 'Sample Student 2' },
+        { fp_id: 'FF008', fingerprintId: 'FF008', userId: 'FF008', uid: 'FF008', device_user_id: 'FF008', name: 'Sample Student 1' },
+        { fp_id: 'FF009', fingerprintId: 'FF009', userId: 'FF009', uid: 'FF009', device_user_id: 'FF009', name: 'Sample Student 2' },
       ],
     }
   }
@@ -202,17 +202,23 @@ async function getAttendanceLogs() {
       success: true,
       data: [
         {
-          device_log_id: `log-${today}-FP008-1`,
+          device_log_id: `log-${today}-FF008-1`,
           device_id: 'c101-plus',
-          fp_id: 'FP008',
+          fp_id: 'FF008',
+          fingerprintId: 'FF008',
+          userId: 'FF008',
+          uid: 'FF008',
           date: today,
           time: '09:00:00',
           status: 'PRESENT',
         },
         {
-          device_log_id: `log-${today}-FP009-1`,
+          device_log_id: `log-${today}-FF009-1`,
           device_id: 'c101-plus',
-          fp_id: 'FP009',
+          fp_id: 'FF009',
+          fingerprintId: 'FF009',
+          userId: 'FF009',
+          uid: 'FF009',
           date: today,
           time: '09:05:00',
           status: 'PRESENT',

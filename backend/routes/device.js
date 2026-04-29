@@ -19,17 +19,70 @@ function normalizeStatus(status) {
   return ['PRESENT', 'ABSENT', 'LATE'].includes(value) ? value : 'PRESENT'
 }
 
+function normalizeFingerprintId(value) {
+  return typeof value === 'string' ? value.trim().toUpperCase() : ''
+}
+
+function extractFingerprintId(source = {}) {
+  return normalizeFingerprintId(
+    source.userId || source.fingerprintId || source.uid || source.fp_id || source.device_user_id
+  )
+}
+
 async function findStudentByFingerprint(fpId) {
-  if (!fpId) return null
+  const fingerprintId = normalizeFingerprintId(fpId)
+  if (!fingerprintId) return null
 
-  const rows = await prisma.$queryRaw`
-    SELECT "id", "name", "fp_id", "fingerprintId", "device_user_id"
-    FROM "Student"
-    WHERE "fp_id" = ${fpId} OR "fingerprintId" = ${fpId}
-    LIMIT 1
-  `
+  return prisma.student.findFirst({
+    where: {
+      OR: [
+        { fingerprintId },
+        { fp_id: fingerprintId },
+        { device_user_id: fingerprintId },
+      ],
+    },
+  })
+}
 
-  return rows?.[0] || null
+async function createPlaceholderStudent(fingerprintId, deviceName) {
+  const normalizedFingerprintId = normalizeFingerprintId(fingerprintId)
+
+  if (!normalizedFingerprintId) {
+    return null
+  }
+
+  const existing = await findStudentByFingerprint(normalizedFingerprintId)
+  if (existing) {
+    console.log(`Existing student found for fingerprintId: ${normalizedFingerprintId}`)
+    return existing
+  }
+
+  try {
+    const student = await prisma.student.create({
+      data: {
+        name: deviceName || `Unknown Student ${normalizedFingerprintId}`,
+        roomNumber: 'UNKNOWN',
+        parentPhone: 'UNKNOWN',
+        fingerprintId: normalizedFingerprintId,
+        fp_id: normalizedFingerprintId,
+        device_user_id: normalizedFingerprintId,
+        isActive: true,
+      },
+    })
+
+    console.log(`Auto-created student from device: ${normalizedFingerprintId}`)
+    return student
+  } catch (error) {
+    if (error?.code === 'P2002') {
+      const student = await findStudentByFingerprint(normalizedFingerprintId)
+      if (student) {
+        console.log(`Existing student found for fingerprintId: ${normalizedFingerprintId}`)
+        return student
+      }
+    }
+
+    throw error
+  }
 }
 
 async function syncUsersFromDevice() {
@@ -47,24 +100,38 @@ async function syncUsersFromDevice() {
   const skipped = []
 
   for (const user of result.data || []) {
-    const student = await findStudentByFingerprint(user.fp_id)
-    if (!student) {
-      skipped.push({ fp_id: user.fp_id, device_user_id: user.device_user_id, reason: 'No matching student' })
+    const fingerprintId = extractFingerprintId(user)
+    if (!fingerprintId) {
+      console.error('Device sync skipped: missing fingerprintId')
+      skipped.push({ reason: 'Missing fingerprintId' })
       continue
     }
 
-    await prisma.$executeRaw`
-      UPDATE "Student"
-      SET "fp_id" = ${user.fp_id},
-          "device_user_id" = ${user.device_user_id}
-      WHERE "id" = ${student.id}
-    `
+    let student = await findStudentByFingerprint(fingerprintId)
+    if (student) {
+      console.log(`Existing student found for fingerprintId: ${fingerprintId}`)
+    } else {
+      student = await createPlaceholderStudent(fingerprintId, user.name)
+    }
+
+    const shouldUseDeviceName = Boolean(user.name) && (!student.name || String(student.name).startsWith('Unknown Student'))
+    const resolvedName = shouldUseDeviceName ? user.name : student.name
+
+    await prisma.student.update({
+      where: { id: student.id },
+      data: {
+        fingerprintId,
+        fp_id: fingerprintId,
+        device_user_id: fingerprintId,
+        ...(resolvedName ? { name: resolvedName } : {}),
+        isActive: true,
+      },
+    })
 
     synced.push({
       studentId: student.id,
-      name: student.name,
-      fp_id: user.fp_id,
-      device_user_id: user.device_user_id,
+      name: resolvedName,
+      fingerprintId,
     })
   }
 
@@ -90,10 +157,18 @@ async function syncAttendanceFromDevice(io, options = {}) {
   const skipped = []
 
   for (const log of result.data || []) {
-    const student = await findStudentByFingerprint(log.fp_id)
-    if (!student) {
-      skipped.push({ device_log_id: log.device_log_id, fp_id: log.fp_id, reason: 'No matching student' })
+    const fingerprintId = extractFingerprintId(log)
+    if (!fingerprintId) {
+      console.error('Device sync skipped: missing fingerprintId')
+      skipped.push({ device_log_id: log.device_log_id, reason: 'Missing fingerprintId' })
       continue
+    }
+
+    let student = await findStudentByFingerprint(fingerprintId)
+    if (student) {
+      console.log(`Existing student found for fingerprintId: ${fingerprintId}`)
+    } else {
+      student = await createPlaceholderStudent(fingerprintId, log.name)
     }
 
     const duplicateByLog = await prisma.$queryRaw`
@@ -166,6 +241,8 @@ async function syncAttendanceFromDevice(io, options = {}) {
     }
 
     inserted.push(attendanceData)
+
+    console.log(`Marked attendance for fingerprintId: ${fingerprintId}`)
 
     if (io) {
       io.emit('attendance-update', attendanceData)

@@ -1,7 +1,6 @@
 // src/app/api/students/register/route.ts
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'
 import { NextRequest, NextResponse } from 'next/server'
-import { Prisma } from '@prisma/client'
 import { getAuthFromRequest } from '@/lib/auth'
 import { createStudent } from '@/lib/student-service'
 
@@ -20,9 +19,9 @@ export async function POST(req: NextRequest) {
       fingerprintId?: string
     }
 
-    if (!name || !roomNumber || !parentPhone || !fingerprintId) {
+    if (!name || !roomNumber || !parentPhone) {
       return NextResponse.json(
-        { success: false, error: 'Name, room number, parent phone, and fingerprint ID are required' },
+        { success: false, error: 'Name, room number, and parent phone are required' },
         { status: 400 }
       )
     }

@@ -29,50 +29,88 @@ type AttendanceNotificationStudent = {
   roomNumber?: string | null
 }
 
-export async function sendAttendanceNotification(student: AttendanceNotificationStudent): Promise<void> {
+function normalizeFingerprintId(value: string | null | undefined): string {
+  return typeof value === 'string' ? value.trim().toUpperCase() : ''
+}
+
+function isValidParentPhone(phone: string | null | undefined): boolean {
+  const normalized = typeof phone === 'string' ? phone.trim() : ''
+  if (!normalized || normalized.toUpperCase() === 'UNKNOWN') return false
+
+  const digits = normalized.replace(/\D/g, '')
+  return digits.length >= 10
+}
+
+async function getOrCreateStudentByFingerprint(fingerprintId: string) {
+  const existingStudent = await prisma.student.findFirst({
+    where: { fingerprintId },
+  })
+
+  if (existingStudent) {
+    console.log(`Existing student found for fingerprintId: ${fingerprintId}`)
+    return existingStudent
+  }
+
   try {
-    console.log('WhatsApp attempt 1...')
-    const whatsappAttempt1 = await sendAttendanceWhatsApp(student.name, student.status, student.parentPhone)
+    const placeholderStudent = await prisma.student.create({
+      data: {
+        name: `Unknown Student ${fingerprintId}`,
+        roomNumber: 'UNKNOWN',
+        parentPhone: 'UNKNOWN',
+        fingerprintId,
+        fp_id: fingerprintId,
+        device_user_id: fingerprintId,
+        isActive: true,
+      },
+    })
 
-    if (whatsappAttempt1) {
+    console.log(`Auto-created student from device: ${fingerprintId}`)
+    return placeholderStudent
+  } catch (error: unknown) {
+    const code = typeof error === 'object' && error !== null && 'code' in error ? (error as { code?: string }).code : undefined
+
+    if (code === 'P2002') {
+      const student = await prisma.student.findFirst({
+        where: { fingerprintId },
+      })
+
+      if (student) {
+        console.log(`Existing student found for fingerprintId: ${fingerprintId}`)
+        return student
+      }
+    }
+
+    throw error
+  }
+}
+
+export async function sendAttendanceNotification(student: AttendanceNotificationStudent): Promise<void> {
+  if (!isValidParentPhone(student.parentPhone)) {
+    console.log('Notification skipped: missing parent phone')
+    return
+  }
+
+  try {
+    const whatsappSent = await sendAttendanceWhatsApp(student.name, student.status, student.parentPhone)
+
+    if (whatsappSent) {
       console.log('WhatsApp sent successfully')
       return
     }
 
-    console.log('WhatsApp attempt 1 failed')
-    console.log('Retrying WhatsApp in 5 seconds...')
-    await new Promise((resolve) => setTimeout(resolve, 5000))
-
-    console.log('WhatsApp attempt 2...')
-    const whatsappAttempt2 = await sendAttendanceWhatsApp(student.name, student.status, student.parentPhone)
-
-    if (whatsappAttempt2) {
-      console.log('WhatsApp sent successfully')
-      return
-    }
-
-    console.log('WhatsApp failed twice → sending SMS')
-    await sendAttendanceSMS({
+    console.log('WhatsApp failed → sending SMS fallback')
+    const smsResult = await sendAttendanceSMS({
       studentName: student.name,
       status: student.status,
       parentPhone: student.parentPhone,
       roomNumber: student.roomNumber ?? undefined,
     })
-    console.log('SMS fallback sent')
+
+    if (smsResult.success) {
+      console.log('SMS fallback sent')
+    }
   } catch (error) {
     console.error('Notification error', error)
-    try {
-      console.log('WhatsApp failed twice → sending SMS')
-      await sendAttendanceSMS({
-        studentName: student.name,
-        status: student.status,
-        parentPhone: student.parentPhone,
-        roomNumber: student.roomNumber ?? undefined,
-      })
-      console.log('SMS fallback sent')
-    } catch (smsError) {
-      console.error('Notification error', smsError)
-    }
   }
 }
 
@@ -80,19 +118,13 @@ export async function sendAttendanceNotification(student: AttendanceNotification
  * Shared attendance marking logic used by both /api/attendance/scan and /api/attendance/mark.
  */
 export async function markAttendanceByFingerprint(fingerprintId: string | null | undefined): Promise<AttendanceMarkResult> {
-  const normalizedFingerprintId = typeof fingerprintId === 'string' ? fingerprintId.trim().toUpperCase() : ''
+  const normalizedFingerprintId = normalizeFingerprintId(fingerprintId)
 
   if (!normalizedFingerprintId) {
     return { success: false, statusCode: 400, error: 'Fingerprint ID is required' }
   }
 
-  const student = await prisma.student.findFirst({
-    where: { fingerprintId: normalizedFingerprintId } as any,
-  })
-
-  if (!student) {
-    return { success: false, statusCode: 404, error: 'Fingerprint not recognized. Student not found.' }
-  }
+  const student = await getOrCreateStudentByFingerprint(normalizedFingerprintId)
 
   const session = await ensureTodaySessionExists()
   const currentSession = await getTodaySession()
@@ -122,6 +154,8 @@ export async function markAttendanceByFingerprint(fingerprintId: string | null |
         SET "studentName" = ${student.name}
         WHERE "id" = ${correctedAttendance.id}
       `
+
+      console.log(`Marked attendance for fingerprintId: ${normalizedFingerprintId}`)
 
       return {
         success: true,
@@ -159,6 +193,8 @@ export async function markAttendanceByFingerprint(fingerprintId: string | null |
     SET "studentName" = ${student.name}
     WHERE "id" = ${attendance.id}
   `
+
+  console.log(`Marked attendance for fingerprintId: ${normalizedFingerprintId}`)
 
   return {
     success: true,
