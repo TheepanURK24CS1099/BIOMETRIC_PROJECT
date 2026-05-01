@@ -1,6 +1,7 @@
 'use client'
 // src/components/admin/AdminSidebar.tsx
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import toast from 'react-hot-toast'
@@ -22,14 +23,27 @@ const NAV_ITEMS: NavItem[] = [
 
 export default function AdminSidebar({ adminName }: { adminName: string }) {
   const pathname = usePathname()
+  const router = useRouter()
   const [mobileOpen, setMobileOpen] = useState(false)
 
   async function handleLogout() {
     localStorage.clear()
     sessionStorage.clear()
-    void fetch('/api/auth/logout', { method: 'POST' }).catch(() => {})
+    setMobileOpen(false)
+
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+        cache: 'no-store',
+      })
+    } catch {
+      // Continue to redirect even if the network request fails.
+    }
+
     toast.success('Logged out')
-    window.location.href = '/admin/login'
+    router.replace('/admin/login')
+    router.refresh()
   }
 
   const SidebarContent = () => (
