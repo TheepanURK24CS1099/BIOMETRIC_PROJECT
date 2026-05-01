@@ -417,11 +417,6 @@ export default function AttendanceScanPage() {
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="relative z-10 py-4 text-center text-xs"
-        style={{ color: 'var(--text-muted)', borderTop: '1px solid var(--border)' }}>
-        Girls Hostel Biometric Attendance System · Ready for hardware integration
-      </footer>
     </div>
   )
 }
