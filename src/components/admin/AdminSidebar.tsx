@@ -21,10 +21,19 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/attendance', label: 'Scan Station', icon: '⬡' },
 ]
 
-export default function AdminSidebar({ adminName }: { adminName: string }) {
+export default function AdminSidebar({
+  adminName,
+  adminRole,
+}: {
+  adminName?: string
+  adminRole?: string
+}) {
   const pathname = usePathname()
   const router = useRouter()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const displayName = adminName?.trim() || 'Hostel Admin'
+  const displayRole = adminRole?.trim() || 'Administrator'
+  const displayInitial = displayName.charAt(0).toUpperCase() || 'H'
 
   async function handleLogout() {
     localStorage.clear()
@@ -92,11 +101,11 @@ export default function AdminSidebar({ adminName }: { adminName: string }) {
         <div className="flex items-center gap-3 mb-3 px-3">
           <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
             style={{ background: 'linear-gradient(135deg, #c44def, #a92fd2)' }}>
-            {adminName.charAt(0).toUpperCase()}
+            {displayInitial}
           </div>
           <div>
-            <div className="text-sm font-medium text-white leading-tight">{adminName}</div>
-            <div className="text-xs" style={{ color: 'var(--text-muted)' }}>Administrator</div>
+            <div className="text-sm font-medium text-white leading-tight">{displayName}</div>
+            <div className="text-xs" style={{ color: 'var(--text-muted)' }}>{displayRole}</div>
           </div>
         </div>
         <button
