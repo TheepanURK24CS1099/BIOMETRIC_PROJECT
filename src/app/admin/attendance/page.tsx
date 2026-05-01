@@ -48,9 +48,9 @@ export default function AttendancePage() {
     finally { setExporting(false) }
   }
 
-  const present = records.filter(r => r.status === 'PRESENT').length
-  const absent = records.filter(r => r.status === 'ABSENT').length
-  const late = records.filter(r => r.status === 'LATE').length
+  const outMarked = records.filter(r => !!r.outTime).length
+  const inMarked = records.filter(r => !!r.inTime).length
+  const finalStatus = records.filter(r => ['MORNING OUT NOT MARKED', 'NOT RETURNED', 'NO ATTENDANCE', 'ABSENT', 'PRESENT', 'OUT MARKED', 'IN MARKED', 'LATE'].includes(r.status)).length
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -71,9 +71,9 @@ export default function AttendancePage() {
       {/* Summary pills */}
       <div className="flex gap-3 flex-wrap">
         {[
-          { label: 'Present', value: present, color: '#10b981', bg: 'rgba(16,185,129,0.1)' },
-          { label: 'Absent', value: absent, color: '#ef4444', bg: 'rgba(239,68,68,0.1)' },
-          { label: 'Late', value: late, color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
+          { label: 'OUT marked', value: outMarked, color: '#10b981', bg: 'rgba(16,185,129,0.1)' },
+          { label: 'IN marked', value: inMarked, color: '#38bdf8', bg: 'rgba(56,189,248,0.1)' },
+          { label: 'Final status', value: finalStatus, color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
         ].map(p => (
           <div key={p.label} className="px-4 py-2 rounded-xl flex items-center gap-2"
             style={{ background: p.bg, border: `1px solid ${p.color}30` }}>
@@ -97,9 +97,11 @@ export default function AttendancePage() {
           value={statusFilter}
           onChange={e => setStatusFilter(e.target.value)}>
           <option value="">All Status</option>
-          <option value="PRESENT">Present</option>
-          <option value="ABSENT">Absent</option>
-          <option value="LATE">Late</option>
+          <option value="OUT MARKED">OUT marked</option>
+          <option value="IN MARKED">IN marked</option>
+          <option value="MORNING OUT NOT MARKED">Morning OUT not marked</option>
+          <option value="NOT RETURNED">Not returned</option>
+          <option value="NO ATTENDANCE">No attendance</option>
         </select>
       </div>
 
@@ -119,7 +121,7 @@ export default function AttendancePage() {
             <table className="w-full">
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                  {['Student', 'Room', 'Status', 'Time', 'Notes'].map(h => (
+                  {['Student', 'Room', 'OUT Time', 'IN Time', 'Final Status', 'Notes'].map(h => (
                     <th key={h} className="px-5 py-3.5 text-left text-xs font-600 tracking-wider uppercase"
                       style={{ color: 'var(--text-muted)' }}>{h}</th>
                   ))}
@@ -141,9 +143,14 @@ export default function AttendancePage() {
                     </td>
                     <td className="px-5 py-4 text-sm" style={{ color: 'var(--text-secondary)' }}>{r.student.roomNumber}</td>
                     <td className="px-5 py-4">
+                      <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(16,185,129,0.1)', color: '#10b981' }}>{formatTime(r.outTime)}</span>
+                    </td>
+                    <td className="px-5 py-4">
+                      <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(56,189,248,0.1)', color: '#38bdf8' }}>{formatTime(r.inTime)}</span>
+                    </td>
+                    <td className="px-5 py-4">
                       <span className={`badge ${getStatusBadgeColor(r.status)}`}>{r.status}</span>
                     </td>
-                    <td className="px-5 py-4 text-sm" style={{ color: 'var(--text-secondary)' }}>{formatTime(r.time)}</td>
                     <td className="px-5 py-4 text-xs" style={{ color: 'var(--text-muted)' }}>{r.notes || '—'}</td>
                   </tr>
                 ))}

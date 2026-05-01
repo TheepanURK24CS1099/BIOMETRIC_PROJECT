@@ -1,92 +1,184 @@
 // src/lib/auto-absent.ts
 /**
- * Auto Absent Service
- * Marks all students without attendance for the day as ABSENT
- * Can be triggered by:
- * 1. API endpoint: POST /api/attendance/auto-absent (protected, cron)
- * 2. Vercel Cron Jobs (vercel.json)
- * 3. Node cron job on Render
+ * Attendance close service.
+ * Morning close marks missing OUT scans.
+ * Night close marks missing returns/no attendance.
  */
 
 import prisma from '@/lib/prisma'
 import { sendAttendanceNotification } from '@/lib/attendance'
 import { ensureTodaySessionExists } from '@/lib/createDailySession'
-import { getTodayDate, getCurrentTime } from '@/lib/utils'
+import { formatClockTime, getCurrentTime, getTodayDate } from '@/lib/utils'
 
-export interface AutoAbsentResult {
+export interface AttendanceCloseResult {
   processed: number
   marked: number
   errors: number
   date: string
+  mode: 'morning' | 'night'
 }
 
-export async function runAutoAbsent(date?: string): Promise<AutoAbsentResult> {
-  const targetDate = date || getTodayDate()
-  const currentTime = getCurrentTime()
-  const session = await ensureTodaySessionExists()
+export type AttendanceCloseMode = 'morning' | 'night'
 
-  console.log(`🔄 Running auto-absent for date: ${targetDate} at ${currentTime}`)
+function getMorningCloseTime(): string {
+  return process.env.MORNING_OUT_CLOSE_TIME || '10:00'
+}
+
+function getNightCloseTime(): string {
+  return process.env.ATTENDANCE_CUTOFF_TIME || process.env.AUTO_ABSENT_TIME || '22:00'
+}
+
+function getModeFromCurrentTime(currentTime: string): AttendanceCloseMode {
+  return currentTime >= getNightCloseTime() ? 'night' : 'morning'
+}
+
+async function upsertAttendanceForStudent(student: any, date: string, data: Record<string, unknown>) {
+  const existing = await prisma.attendance.findFirst({
+    where: { studentId: student.id, date },
+  }) as any
+
+  if (!existing) {
+    return (prisma.attendance.create as any)({
+      data: {
+        studentId: student.id,
+        studentName: student.name,
+        date,
+        ...data,
+      },
+    })
+  }
+
+  return (prisma.attendance.update as any)({
+    where: { id: existing.id },
+    data: {
+      studentName: student.name,
+      ...data,
+    },
+  })
+}
+
+export async function runAttendanceCloseChecks(options?: {
+  mode?: AttendanceCloseMode
+  date?: string
+}): Promise<AttendanceCloseResult> {
+  const targetDate = options?.date || getTodayDate()
+  const currentTime = getCurrentTime()
+  const mode = options?.mode || getModeFromCurrentTime(currentTime)
+
+  await ensureTodaySessionExists()
+
+  console.log(`🔄 Running attendance close checks (${mode}) for ${targetDate} at ${currentTime}`)
 
   let marked = 0
   let errors = 0
 
   try {
-    // Get all active students
     const allStudents = await (prisma.student.findMany as any)({
       where: { isActive: true },
+      orderBy: { createdAt: 'asc' },
     })
 
-    // Get students who already have attendance today
-    const existingAttendance = await prisma.attendance.findMany({
+    const attendanceRecords = await prisma.attendance.findMany({
       where: { date: targetDate },
-      select: { studentId: true },
-    })
+      select: {
+        id: true,
+        studentId: true,
+        status: true,
+        outTime: true,
+        inTime: true,
+      } as any,
+    }) as any[]
 
-    const attendedStudentIds = new Set(existingAttendance.map((a) => a.studentId))
+    const recordsByStudent = new Map(attendanceRecords.map((record) => [String(record.studentId), record]))
 
-    // Find students without attendance
-    const absentStudents = (allStudents as any[]).filter((s: any) => !attendedStudentIds.has(s.id))
-
-    console.log(
-      `📊 Total: ${allStudents.length}, Present: ${attendedStudentIds.size}, Absent: ${absentStudents.length}`
-    )
-
-    // Mark absent and send notifications
-    for (const student of absentStudents) {
+    for (const student of allStudents as any[]) {
       try {
-        await prisma.attendance.create({
-          data: {
-            studentId: student.id,
-            date: targetDate,
-            status: 'ABSENT',
-            time: null,
-          },
-        })
+        const existing = recordsByStudent.get(String(student.id))
 
-        await prisma.$executeRaw`
-          UPDATE "Attendance"
-          SET "studentName" = ${student.name}
-          WHERE "studentId" = ${student.id} AND "date" = ${targetDate}
-        `
+        if (mode === 'morning') {
+          if (existing?.outTime) {
+            continue
+          }
+
+          if (existing?.status === 'MORNING OUT NOT MARKED' && !existing?.outTime) {
+            continue
+          }
+
+          await upsertAttendanceForStudent(student, targetDate, {
+            status: 'MORNING OUT NOT MARKED',
+            time: null,
+            outTime: null,
+            inTime: null,
+            notes: 'Marked by morning close check',
+          })
+
+          await sendAttendanceNotification({
+            name: student.name,
+            status: 'MORNING OUT NOT MARKED',
+            parentPhone: student.parentPhone,
+            roomNumber: student.roomNumber,
+            date: targetDate,
+            time: formatClockTime(getMorningCloseTime()),
+          })
+
+          marked++
+          console.log(`MORNING OUT NOT MARKED sent for ${student.fingerprintId}`)
+          continue
+        }
+
+        const hasOut = Boolean(existing?.outTime)
+        const hasIn = Boolean(existing?.inTime)
+
+        let newStatus: 'NOT RETURNED' | 'NO ATTENDANCE' | null = null
+
+        if (hasOut && !hasIn) {
+          newStatus = 'NOT RETURNED'
+        } else if (!hasOut && !hasIn) {
+          newStatus = 'NO ATTENDANCE'
+        }
+
+        if (!newStatus) {
+          continue
+        }
+
+        if (existing?.status === newStatus) {
+          continue
+        }
+
+        await upsertAttendanceForStudent(student, targetDate, {
+          status: newStatus,
+          time: existing?.time ?? null,
+          outTime: existing?.outTime ?? null,
+          inTime: existing?.inTime ?? null,
+          notes: newStatus === 'NOT RETURNED'
+            ? 'Marked by night close check: OUT recorded, IN missing'
+            : 'Marked by night close check: no attendance found',
+        })
 
         await sendAttendanceNotification({
           name: student.name,
-          status: 'ABSENT',
+          status: newStatus,
           parentPhone: student.parentPhone,
           roomNumber: student.roomNumber,
+          date: targetDate,
+          time: formatClockTime(getNightCloseTime()),
         })
 
         marked++
-        console.log(`✅ Marked absent: ${student.name}`)
+        console.log(`${newStatus} marked for ${student.fingerprintId}`)
       } catch (error) {
         errors++
-        console.error(`❌ Error marking absent for ${student.name}:`, error)
+        console.error(`❌ Error marking attendance close status for ${student.name}:`, error)
       }
     }
 
-    return { processed: absentStudents.length, marked, errors, date: targetDate }
+    return { processed: allStudents.length, marked, errors, date: targetDate, mode }
   } catch (error) {
-    console.error('❌ Auto-absent job failed:', error)
+    console.error('❌ Attendance close job failed:', error)
     throw error
   }
+}
+
+export async function runAutoAbsent(date?: string): Promise<AttendanceCloseResult> {
+  return runAttendanceCloseChecks({ date })
 }

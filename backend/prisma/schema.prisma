@@ -39,6 +39,8 @@ model Attendance {
   date          String            // YYYY-MM-DD format
   status        String            @default("PRESENT")
   time          String?           // HH:MM:SS format
+  outTime       String?           // HH:MM:SS format
+  inTime        String?           // HH:MM:SS format
   notes         String?
   device_log_id String?
   device_id     String?

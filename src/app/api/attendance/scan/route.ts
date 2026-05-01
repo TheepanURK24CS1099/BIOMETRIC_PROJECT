@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { markAttendanceByFingerprint, sendAttendanceNotification } from '@/lib/attendance'
+import { markAttendanceByFingerprint } from '@/lib/attendance'
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,20 +14,6 @@ export async function POST(req: NextRequest) {
     }
 
     const result = await markAttendanceByFingerprint(fingerprintId)
-
-    if (result.success && result.data?.student && result.data?.attendance) {
-      const { student, attendance } = result.data
-      const status = attendance.status
-
-      if (status === 'PRESENT') {
-        await sendAttendanceNotification({
-          name: student.name,
-          status: 'PRESENT',
-          parentPhone: student.parentPhone,
-          roomNumber: student.roomNumber,
-        })
-      }
-    }
 
     // ✅ SUCCESS CASE
     if (result.success) {

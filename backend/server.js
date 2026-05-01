@@ -38,7 +38,7 @@ console.log('Backend environment loaded:', {
   whatsappProvider: process.env.WHATSAPP_PROVIDER || 'not-set',
   hasFast2SmsKey: Boolean(process.env.FAST2SMS_API_KEY),
   whatsappPhoneNumberId: process.env.FAST2SMS_WHATSAPP_PHONE_NUMBER_ID ? 'set' : 'missing',
-  whatsappTemplate: process.env.FAST2SMS_WHATSAPP_TEMPLATE || 'sr_hostel_attendance',
+  whatsappTemplate: process.env.FAST2SMS_WHATSAPP_TEMPLATE || 'attendance_update',
 })
 
 app.get('/health', (_req, res) => {
@@ -47,9 +47,9 @@ app.get('/health', (_req, res) => {
 
 app.post('/send-whatsapp', async (req, res) => {
   try {
-    const { name, status, phone, room } = req.body
+    const { parent, name, status, date, time, phone } = req.body
 
-    const result = await sendAttendanceWhatsApp(name, status, phone, room)
+    const result = await sendAttendanceWhatsApp({ parent, name, status, date, time, phone })
 
     if (result) {
       return res.json({ success: true, message: 'WhatsApp sent' })

@@ -30,6 +30,12 @@ export function formatTime(time: string | null | undefined): string {
   }
 }
 
+export function formatClockTime(time: string | null | undefined): string {
+  if (!time) return '—'
+  const normalized = time.length === 5 ? `${time}:00` : time
+  return formatTime(normalized)
+}
+
 export function isLate(time: string): boolean {
   const cutoff = process.env.ATTENDANCE_CUTOFF_TIME || '22:00'
   return time > cutoff
@@ -63,7 +69,12 @@ export function paginate<T>(items: T[], page: number, limit: number) {
 export function getStatusColor(status: string): string {
   switch (status) {
     case 'PRESENT': return 'text-emerald-400 bg-emerald-400/10'
+    case 'OUT MARKED':
+    case 'IN MARKED': return 'text-cyan-400 bg-cyan-400/10'
+    case 'MORNING OUT NOT MARKED': return 'text-amber-400 bg-amber-400/10'
+    case 'NOT RETURNED':
     case 'ABSENT': return 'text-red-400 bg-red-400/10'
+    case 'NO ATTENDANCE': return 'text-rose-400 bg-rose-400/10'
     case 'LATE': return 'text-amber-400 bg-amber-400/10'
     default: return 'text-slate-400 bg-slate-400/10'
   }
@@ -72,7 +83,12 @@ export function getStatusColor(status: string): string {
 export function getStatusBadgeColor(status: string): string {
   switch (status) {
     case 'PRESENT': return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+    case 'OUT MARKED':
+    case 'IN MARKED': return 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30'
+    case 'MORNING OUT NOT MARKED': return 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+    case 'NOT RETURNED':
     case 'ABSENT': return 'bg-red-500/20 text-red-300 border-red-500/30'
+    case 'NO ATTENDANCE': return 'bg-rose-500/20 text-rose-300 border-rose-500/30'
     case 'LATE': return 'bg-amber-500/20 text-amber-300 border-amber-500/30'
     default: return 'bg-slate-500/20 text-slate-300 border-slate-500/30'
   }

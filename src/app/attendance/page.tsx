@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { io, Socket } from 'socket.io-client'
 import toast from 'react-hot-toast'
-import { formatTime } from '@/lib/utils'
+import { formatTime, getStatusBadgeColor } from '@/lib/utils'
 import type { Student, Attendance } from '@/types'
 
 type ScanState = 'idle' | 'scanning' | 'success' | 'already' | 'error'
@@ -330,16 +330,12 @@ export default function AttendanceScanPage() {
                   </p>
                   {result.attendance && (
                     <div className="flex items-center gap-2 mt-1">
-                      <span className={`badge ${
-                        result.attendance.status === 'PRESENT' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' :
-                        result.attendance.status === 'LATE' ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' :
-                        'bg-red-500/20 text-red-300 border-red-500/30'
-                      }`}>
+                      <span className={`badge ${getStatusBadgeColor(result.attendance.status)}`}>
                         {result.attendance.status}
                       </span>
-                      {result.attendance.time && (
+                      {(result.attendance.outTime || result.attendance.time) && (
                         <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                          at {formatTime(result.attendance.time)}
+                          at {formatTime(result.attendance.outTime || result.attendance.time)}
                         </span>
                       )}
                     </div>

@@ -17,6 +17,8 @@ interface Stats {
     id: string
     status: string
     time: string | null
+    outTime: string | null
+    inTime: string | null
     student: { name: string; roomNumber: string }
   }>
   weeklyTrend: Array<{ date: string; present: number; absent: number; late: number }>
@@ -477,8 +479,11 @@ export default function DashboardPage() {
                     <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Room {record.student.roomNumber}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{formatTime(record.time)}</span>
+                <div className="flex flex-col items-end gap-1">
+                  <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-muted)' }}>
+                    <span>OUT {formatTime(record.outTime || record.time)}</span>
+                    <span>IN {formatTime(record.inTime)}</span>
+                  </div>
                   <span className={`badge ${getStatusBadgeColor(record.status)}`}>{record.status}</span>
                 </div>
               </div>

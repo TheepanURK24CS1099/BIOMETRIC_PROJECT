@@ -7,6 +7,15 @@ type SendWhatsAppParams = {
   message: string
 }
 
+export type AttendanceWhatsAppPayload = {
+  phone: string
+  parent: string
+  studentName: string
+  status: string
+  date: string
+  time: string
+}
+
 export async function sendWhatsApp({ phone, message }: SendWhatsAppParams): Promise<boolean> {
   const provider = process.env.WHATSAPP_PROVIDER || 'fast2sms'
   const WHATSAPP_SERVICE_URL = process.env.WHATSAPP_SERVICE_URL
@@ -54,7 +63,7 @@ export async function sendWhatsApp({ phone, message }: SendWhatsAppParams): Prom
   }
 }
 
-export async function sendAttendanceWhatsApp(name: string, status: string, phone: string): Promise<boolean> {
+export async function sendAttendanceWhatsApp(payload: AttendanceWhatsAppPayload): Promise<boolean> {
   const provider = process.env.WHATSAPP_PROVIDER || 'fast2sms'
   const WHATSAPP_SERVICE_URL = process.env.WHATSAPP_SERVICE_URL
   const DEVICE_API_KEY = process.env.DEVICE_API_KEY
@@ -77,9 +86,12 @@ export async function sendAttendanceWhatsApp(name: string, status: string, phone
         'x-device-key': DEVICE_API_KEY,
       },
       body: JSON.stringify({
-        phone: normalizePhone(phone),
-        name,
-        status,
+        phone: normalizePhone(payload.phone),
+        parent: payload.parent,
+        name: payload.studentName,
+        status: payload.status,
+        date: payload.date,
+        time: payload.time,
       }),
     })
 
@@ -94,7 +106,7 @@ export async function sendAttendanceWhatsApp(name: string, status: string, phone
       return false
     }
 
-    console.log(`✅ WhatsApp sent to +91${normalizePhone(phone)}`)
+    console.log(`✅ WhatsApp sent to +91${normalizePhone(payload.phone)}`)
     return true
   } catch (error) {
     console.error('POST /send-whatsapp request failed:', error)

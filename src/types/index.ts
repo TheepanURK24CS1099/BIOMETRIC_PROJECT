@@ -1,6 +1,14 @@
 // src/types/index.ts
 
-export type AttendanceStatus = 'PRESENT' | 'ABSENT' | 'LATE'
+export type AttendanceStatus =
+  | 'PRESENT'
+  | 'ABSENT'
+  | 'LATE'
+  | 'OUT MARKED'
+  | 'IN MARKED'
+  | 'MORNING OUT NOT MARKED'
+  | 'NOT RETURNED'
+  | 'NO ATTENDANCE'
 
 export interface Student {
   id: string
@@ -21,6 +29,8 @@ export interface Attendance {
   date: string
   status: AttendanceStatus
   time?: string | null
+  outTime?: string | null
+  inTime?: string | null
   notes?: string | null
   createdAt: string
   updatedAt: string

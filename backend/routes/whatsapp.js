@@ -6,18 +6,18 @@ const router = Router()
 
 router.post('/send-whatsapp', deviceAuth, async (req, res) => {
   try {
-    const { phone, name, status } = req.body || {}
+    const { phone, parent, name, status, date, time } = req.body || {}
 
-    if (!phone || !name || !status) {
+    if (!phone || !name || !status || !date || !time) {
       return res.status(400).json({
         success: false,
-        error: 'phone, name, and status are required',
+        error: 'phone, name, status, date, and time are required',
       })
     }
 
-    console.log('POST /send-whatsapp body:', { phone, name, status })
+    console.log('POST /send-whatsapp body:', { phone, parent, name, status, date, time })
 
-    const success = await sendAttendanceWhatsApp(name, status, phone)
+    const success = await sendAttendanceWhatsApp({ parent, name, status, date, time, phone })
 
     if (success) {
       return res.status(200).json({

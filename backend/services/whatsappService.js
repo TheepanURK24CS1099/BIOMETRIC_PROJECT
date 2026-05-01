@@ -12,14 +12,10 @@ function normalizePhone(phone) {
 }
 
 function getTemplateName() {
-  return process.env.FAST2SMS_WHATSAPP_TEMPLATE || 'sr_hostel_attendance'
+  return process.env.FAST2SMS_WHATSAPP_TEMPLATE || 'attendance_update'
 }
 
-function getTodayDate() {
-  return new Date().toISOString().split('T')[0]
-}
-
-async function sendAttendanceWhatsApp(name, status, phone, room) {
+async function sendAttendanceWhatsApp({ parent, name, status, date, time, phone }) {
   const whatsappProvider = process.env.WHATSAPP_PROVIDER || 'mock'
   const apiKey = process.env.FAST2SMS_API_KEY
   const phoneNumberId = process.env.FAST2SMS_WHATSAPP_PHONE_NUMBER_ID
@@ -53,9 +49,11 @@ async function sendAttendanceWhatsApp(name, status, phone, room) {
         {
           type: 'body',
           parameters: [
-              { type: 'text', text: "Test User" },
-              { type: 'text', text: "PRESENT" },
-              { type: 'text', text: "2026-04-28" },
+            { type: 'text', text: parent || 'Parent' },
+            { type: 'text', text: name },
+            { type: 'text', text: status },
+            { type: 'text', text: date },
+            { type: 'text', text: time },
           ],
         },
       ],

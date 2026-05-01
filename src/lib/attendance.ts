@@ -1,7 +1,7 @@
 // src/lib/attendance.ts
 import prisma from '@/lib/prisma'
 import { ensureTodaySessionExists, getTodaySession } from '@/lib/createDailySession'
-import { getCurrentTime, getTodayDate, isLate } from '@/lib/utils'
+import { formatClockTime, getCurrentTime, getTodayDate } from '@/lib/utils'
 import { sendAttendanceSMS } from '@/lib/sms'
 import { sendAttendanceWhatsApp } from '@/lib/whatsapp'
 
@@ -22,11 +22,20 @@ type AttendanceMarkResult =
       data?: Record<string, unknown>
     }
 
+type AttendanceNotificationStatus =
+  | 'OUT from hostel'
+  | 'IN to hostel'
+  | 'MORNING OUT NOT MARKED'
+  | 'NOT RETURNED'
+  | 'NO ATTENDANCE'
+
 type AttendanceNotificationStudent = {
   name: string
-  status: 'PRESENT' | 'ABSENT'
+  status: AttendanceNotificationStatus
   parentPhone: string
   roomNumber?: string | null
+  date?: string
+  time?: string
 }
 
 function normalizeFingerprintId(value: string | null | undefined): string {
@@ -91,27 +100,49 @@ export async function sendAttendanceNotification(student: AttendanceNotification
   }
 
   try {
-    const whatsappSent = await sendAttendanceWhatsApp(student.name, student.status, student.parentPhone)
+    const whatsappSent = await sendAttendanceWhatsApp({
+      parent: 'Parent',
+      studentName: student.name,
+      status: student.status,
+      date: student.date || getTodayDate(),
+      time: student.time || formatClockTime(getCurrentTime()),
+      phone: student.parentPhone,
+    })
 
     if (whatsappSent) {
-      console.log('WhatsApp sent successfully')
+      console.log('WhatsApp sent')
       return
     }
 
-    console.log('WhatsApp failed → sending SMS fallback')
     const smsResult = await sendAttendanceSMS({
       studentName: student.name,
       status: student.status,
       parentPhone: student.parentPhone,
       roomNumber: student.roomNumber ?? undefined,
+      date: student.date || getTodayDate(),
+      time: student.time || getCurrentTime(),
     })
 
     if (smsResult.success) {
-      console.log('SMS fallback sent')
+      console.log('WhatsApp failed, SMS fallback sent')
+    } else {
+      console.log('WhatsApp failed, SMS fallback failed')
     }
   } catch (error) {
     console.error('Notification error', error)
   }
+}
+
+function getScanTimeValue(): string {
+  return getCurrentTime()
+}
+
+function isFinalStatus(status?: string | null): boolean {
+  return Boolean(status && ['NOT RETURNED', 'NO ATTENDANCE'].includes(status))
+}
+
+function isDuplicateFinalRecord(attendance: { outTime?: string | null; inTime?: string | null; status?: string | null }): boolean {
+  return Boolean(attendance.outTime && attendance.inTime)
 }
 
 /**
@@ -126,28 +157,28 @@ export async function markAttendanceByFingerprint(fingerprintId: string | null |
 
   const student = await getOrCreateStudentByFingerprint(normalizedFingerprintId)
 
-  const session = await ensureTodaySessionExists()
+  await ensureTodaySessionExists()
   const currentSession = await getTodaySession()
   if (currentSession?.isClosed) {
     return { success: false, statusCode: 403, error: 'Attendance already closed' }
   }
 
   const todayDate = getTodayDate()
-  const currentTime = getCurrentTime()
+  const currentTime = getScanTimeValue()
 
-  const existing = await prisma.attendance.findFirst({
+  const existing = (await prisma.attendance.findFirst({
     where: {
       studentId: student.id,
       date: todayDate,
     },
-  })
+  })) as any
 
-  if (existing) {
-    console.log(`⚠ Duplicate attendance prevented for ${student.fingerprintId}`)
+  if (existing && isDuplicateFinalRecord(existing)) {
+    console.log(`Duplicate scan prevented for ${student.fingerprintId}`)
     return {
       success: true,
       statusCode: 200,
-      message: 'Already marked today',
+      message: 'Morning OUT and evening IN already marked today.',
       data: {
         student,
         attendance: existing,
@@ -155,29 +186,61 @@ export async function markAttendanceByFingerprint(fingerprintId: string | null |
     }
   }
 
-  const status = isLate(currentTime) ? 'LATE' : 'PRESENT'
+  const scanStatus: AttendanceNotificationStatus = !existing || !existing.outTime ? 'OUT from hostel' : 'IN to hostel'
 
-  const attendance = await prisma.attendance.create({
-    data: {
-      studentId: student.id,
-      date: todayDate,
-      status: status as any,
-      time: currentTime,
-    },
+  let attendance
+
+  if (!existing) {
+    attendance = await (prisma.attendance.create as any)({
+      data: {
+        studentId: student.id,
+        studentName: student.name,
+        date: todayDate,
+        status: 'OUT MARKED',
+        time: currentTime,
+        outTime: currentTime,
+      },
+    })
+    console.log(`OUT marked for fingerprintId ${normalizedFingerprintId}`)
+  } else if (!existing.outTime) {
+    attendance = await (prisma.attendance.update as any)({
+      where: { id: existing.id },
+      data: {
+        studentName: student.name,
+        status: 'OUT MARKED',
+        time: currentTime,
+        outTime: currentTime,
+      },
+    })
+    console.log(`OUT marked for fingerprintId ${normalizedFingerprintId}`)
+  } else {
+    attendance = await (prisma.attendance.update as any)({
+      where: { id: existing.id },
+      data: {
+        studentName: student.name,
+        status: 'IN MARKED',
+        time: currentTime,
+        inTime: currentTime,
+      },
+    })
+    console.log(`IN marked for fingerprintId ${normalizedFingerprintId}`)
+  }
+
+  await sendAttendanceNotification({
+    name: student.name,
+    status: scanStatus,
+    parentPhone: student.parentPhone,
+    roomNumber: student.roomNumber,
+    date: todayDate,
+    time: currentTime,
   })
-
-  await prisma.$executeRaw`
-    UPDATE "Attendance"
-    SET "studentName" = ${student.name}
-    WHERE "id" = ${attendance.id}
-  `
-
-  console.log(`Marked attendance for fingerprintId: ${normalizedFingerprintId}`)
 
   return {
     success: true,
     statusCode: 200,
-    message: `Attendance marked ${status} for ${student.name}`,
+    message: scanStatus === 'OUT from hostel'
+      ? `OUT marked for ${student.name}`
+      : `IN marked for ${student.name}`,
     data: { student, attendance },
   }
 }

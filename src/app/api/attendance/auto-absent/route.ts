@@ -1,6 +1,9 @@
 // src/app/api/attendance/auto-absent/route.ts
 import { NextRequest, NextResponse } from 'next/server'
+import prisma from '@/lib/prisma'
 import { getAuthFromRequest } from '@/lib/auth'
+import { closeTodaySession, ensureTodaySessionExists } from '@/lib/createDailySession'
+import { getTodayDate } from '@/lib/utils'
 import { runAutoAbsent } from '@/lib/auto-absent'
 
 /**
@@ -29,9 +32,21 @@ export async function POST(req: NextRequest) {
 
     const result = await runAutoAbsent(date)
 
+    if (result.mode === 'night') {
+      await ensureTodaySessionExists()
+      const closedSession = await closeTodaySession()
+
+      await (prisma.attendance.updateMany as any)({
+        where: { date: date || getTodayDate(), sessionId: null },
+        data: { sessionId: closedSession.id },
+      })
+    }
+
     return NextResponse.json({
       success: true,
-      message: `Auto-absent completed. Marked ${result.marked} students absent.`,
+      message: result.mode === 'night'
+        ? `Night close completed. Marked ${result.marked} students with final status.`
+        : `Morning close completed. Marked ${result.marked} students with morning status.`,
       data: result,
     })
   } catch (error) {

@@ -5,6 +5,12 @@ import { getAuthFromRequest } from '@/lib/auth'
 import { getTodayDate } from '@/lib/utils'
 import { getTodaySession } from '@/lib/createDailySession'
 
+const FINAL_ABSENT_STATUSES = ['MORNING OUT NOT MARKED', 'NOT RETURNED', 'NO ATTENDANCE', 'ABSENT']
+
+function isMarkedRecord(record: { outTime?: string | null; inTime?: string | null; status?: string | null }): boolean {
+  return Boolean(record.outTime || record.inTime || (record.status && ['OUT MARKED', 'IN MARKED', 'PRESENT'].includes(record.status)))
+}
+
 export async function GET(req: NextRequest) {
   const auth = await getAuthFromRequest(req)
   if (!auth) return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
@@ -13,19 +19,27 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const date = searchParams.get('date') || getTodayDate()
 
-    const [totalStudents, presentToday, absentToday, lateToday, recentAttendance] =
-      await Promise.all([
-        (prisma.student.count as any)({ where: { isActive: true } }),
-        (prisma.attendance.count as any)({ where: { date, status: 'PRESENT' } }),
-        (prisma.attendance.count as any)({ where: { date, status: 'ABSENT' } }),
-        (prisma.attendance.count as any)({ where: { date, status: 'LATE' } }),
-        (prisma.attendance.findMany as any)({
-          where: { date },
-          include: { student: true },
-          orderBy: { createdAt: 'desc' },
-          take: 10,
-        }),
-      ])
+    const [totalStudents, recentAttendance, allTodayAttendance] = await Promise.all([
+      (prisma.student.count as any)({ where: { isActive: true } }),
+      (prisma.attendance.findMany as any)({
+        where: { date },
+        include: { student: true },
+        orderBy: { updatedAt: 'desc' },
+        take: 10,
+      }),
+      (prisma.attendance.findMany as any)({
+        where: { date },
+        select: {
+          status: true,
+          outTime: true,
+          inTime: true,
+        },
+      }),
+    ])
+
+    const presentToday = allTodayAttendance.filter(isMarkedRecord).length
+    const absentToday = allTodayAttendance.filter((record) => FINAL_ABSENT_STATUSES.includes(record.status)).length
+    const lateToday = allTodayAttendance.filter((record) => record.status === 'LATE').length
 
     const todaySession = await getTodaySession()
 
@@ -41,8 +55,14 @@ export async function GET(req: NextRequest) {
       d.setDate(d.getDate() - i)
       const dateStr = d.toISOString().split('T')[0]
       const [p, a, l] = await Promise.all([
-        (prisma.attendance.count as any)({ where: { date: dateStr, status: 'PRESENT' } }),
-        (prisma.attendance.count as any)({ where: { date: dateStr, status: 'ABSENT' } }),
+        (prisma.attendance.findMany as any)({
+          where: { date: dateStr },
+          select: { status: true, outTime: true, inTime: true },
+        }).then((rows: Array<{ status: string; outTime: string | null; inTime: string | null }>) => rows.filter(isMarkedRecord).length),
+        (prisma.attendance.findMany as any)({
+          where: { date: dateStr },
+          select: { status: true, outTime: true, inTime: true },
+        }).then((rows: Array<{ status: string; outTime: string | null; inTime: string | null }>) => rows.filter((record) => FINAL_ABSENT_STATUSES.includes(record.status)).length),
         (prisma.attendance.count as any)({ where: { date: dateStr, status: 'LATE' } }),
       ])
       weeklyTrend.push({ date: dateStr, present: p, absent: a, late: l })

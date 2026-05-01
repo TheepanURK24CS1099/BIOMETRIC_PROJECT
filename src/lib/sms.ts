@@ -8,6 +8,7 @@
  */
 
 import prisma from '@/lib/prisma'
+import { formatClockTime } from '@/lib/utils'
 
 export interface SMSResult {
   success: boolean
@@ -128,7 +129,9 @@ export async function sendAttendanceSMS(
     ? { studentName, status: status || 'ABSENT', parentPhone: phone || '' }
     : studentName
 
-  const message = buildMessage(data.studentName, data.status)
+  const dateText = data.date || new Date().toISOString().split('T')[0]
+  const timeText = data.time ? formatClockTime(data.time) : formatClockTime(new Date().toTimeString().slice(0, 8))
+  const message = `${buildMessage(data.studentName, data.status)}\nDate: ${dateText}\nTime: ${timeText}`
 
   // Step 6: Route to Fast2SMS only when explicitly enabled.
   const provider = process.env.SMS_PROVIDER || 'mock'
