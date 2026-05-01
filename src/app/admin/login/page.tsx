@@ -22,7 +22,7 @@ export default function LoginPage() {
       const data = await res.json()
       if (data.success) {
         toast.success(`Welcome back, ${data.data.name}!`)
-        router.push('/admin/dashboard')
+        window.location.replace('/admin/dashboard')
       } else {
         toast.error(data.error || 'Login failed')
       }
