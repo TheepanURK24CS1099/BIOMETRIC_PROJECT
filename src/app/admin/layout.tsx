@@ -12,7 +12,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <div className="flex min-h-screen" style={{ background: 'var(--bg-primary)' }}>
       <AdminSidebar adminName={auth.name} />
-      <main className="flex-1 lg:ml-64 p-4 lg:p-8 pt-20 lg:pt-8">
+      <main className="min-w-0 flex-1 p-4 pt-20 md:ml-[280px] md:pt-8 lg:p-8">
         {children}
       </main>
     </div>
