@@ -36,6 +36,15 @@ export function formatClockTime(time: string | null | undefined): string {
   return formatTime(normalized)
 }
 
+export function toTitleCase(value: string): string {
+  return value
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}
+
 export function isLate(time: string): boolean {
   const cutoff = process.env.ATTENDANCE_CUTOFF_TIME || '22:00'
   return time > cutoff

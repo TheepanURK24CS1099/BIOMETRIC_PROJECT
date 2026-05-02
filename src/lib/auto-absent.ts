@@ -8,7 +8,7 @@
 import prisma from '@/lib/prisma'
 import { sendAttendanceNotification } from '@/lib/attendance'
 import { ensureTodaySessionExists } from '@/lib/createDailySession'
-import { formatClockTime, getCurrentTime, getTodayDate } from '@/lib/utils'
+import { getCurrentTime, getTodayDate } from '@/lib/utils'
 
 export interface AttendanceCloseResult {
   processed: number
@@ -118,7 +118,7 @@ export async function runAttendanceCloseChecks(options?: {
             parentPhone: student.parentPhone,
             roomNumber: student.roomNumber,
             date: targetDate,
-            time: formatClockTime(getMorningCloseTime()),
+            time: currentTime,
           })
 
           marked++
@@ -161,7 +161,7 @@ export async function runAttendanceCloseChecks(options?: {
           parentPhone: student.parentPhone,
           roomNumber: student.roomNumber,
           date: targetDate,
-          time: formatClockTime(getNightCloseTime()),
+          time: currentTime,
         })
 
         marked++

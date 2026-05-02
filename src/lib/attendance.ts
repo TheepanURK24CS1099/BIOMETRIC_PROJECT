@@ -1,7 +1,7 @@
 // src/lib/attendance.ts
 import prisma from '@/lib/prisma'
 import { ensureTodaySessionExists, getTodaySession } from '@/lib/createDailySession'
-import { formatClockTime, getCurrentTime, getTodayDate } from '@/lib/utils'
+import { formatClockTime, getCurrentTime, getTodayDate, toTitleCase } from '@/lib/utils'
 import { sendAttendanceSMS } from '@/lib/sms'
 import { sendAttendanceWhatsApp } from '@/lib/whatsapp'
 
@@ -99,13 +99,17 @@ export async function sendAttendanceNotification(student: AttendanceNotification
     return
   }
 
+  const formattedStudentName = toTitleCase(student.name.trim())
+  const notificationTime = student.time || getCurrentTime()
+  const notificationDate = student.date || getTodayDate()
+
   try {
     const whatsappSent = await sendAttendanceWhatsApp({
       parentName: 'Parent',
-      studentName: student.name,
+      studentName: formattedStudentName,
       status: student.status,
-      date: student.date || getTodayDate(),
-      time: student.time || formatClockTime(getCurrentTime()),
+      date: notificationDate,
+      time: formatClockTime(notificationTime),
       phone: student.parentPhone,
     })
 
@@ -115,12 +119,12 @@ export async function sendAttendanceNotification(student: AttendanceNotification
     }
 
     const smsResult = await sendAttendanceSMS({
-      studentName: student.name,
+      studentName: formattedStudentName,
       status: student.status,
       parentPhone: student.parentPhone,
       roomNumber: student.roomNumber ?? undefined,
-      date: student.date || getTodayDate(),
-      time: student.time || getCurrentTime(),
+      date: notificationDate,
+      time: notificationTime,
     })
 
     if (smsResult.success) {
@@ -135,10 +139,6 @@ export async function sendAttendanceNotification(student: AttendanceNotification
 
 function getScanTimeValue(): string {
   return getCurrentTime()
-}
-
-function isFinalStatus(status?: string | null): boolean {
-  return Boolean(status && ['NOT RETURNED', 'NO ATTENDANCE'].includes(status))
 }
 
 function isDuplicateFinalRecord(attendance: { outTime?: string | null; inTime?: string | null; status?: string | null }): boolean {
