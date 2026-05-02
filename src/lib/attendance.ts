@@ -101,7 +101,7 @@ export async function sendAttendanceNotification(student: AttendanceNotification
 
   try {
     const whatsappSent = await sendAttendanceWhatsApp({
-      parent: 'Parent',
+      parentName: 'Parent',
       studentName: student.name,
       status: student.status,
       date: student.date || getTodayDate(),
@@ -225,15 +225,6 @@ export async function markAttendanceByFingerprint(fingerprintId: string | null |
     })
     console.log(`IN marked for fingerprintId ${normalizedFingerprintId}`)
   }
-
-  await sendAttendanceNotification({
-    name: student.name,
-    status: scanStatus,
-    parentPhone: student.parentPhone,
-    roomNumber: student.roomNumber,
-    date: todayDate,
-    time: currentTime,
-  })
 
   return {
     success: true,

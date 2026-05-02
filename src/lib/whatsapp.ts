@@ -9,7 +9,7 @@ type SendWhatsAppParams = {
 
 export type AttendanceWhatsAppPayload = {
   phone: string
-  parent: string
+  parentName: string
   studentName: string
   status: string
   date: string
@@ -87,7 +87,7 @@ export async function sendAttendanceWhatsApp(payload: AttendanceWhatsAppPayload)
       },
       body: JSON.stringify({
         phone: normalizePhone(payload.phone),
-        parent: payload.parent,
+        parent: payload.parentName,
         name: payload.studentName,
         status: payload.status,
         date: payload.date,
