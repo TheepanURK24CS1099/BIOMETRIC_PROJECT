@@ -15,6 +15,15 @@ const PUBLIC_PATHS = [
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
+  const cronSecret = req.headers.get('x-cron-secret')
+
+  if (
+    pathname === '/api/attendance/auto-absent' &&
+    cronSecret &&
+    cronSecret === process.env.CRON_SECRET
+  ) {
+    return NextResponse.next()
+  }
 
   // If an authenticated user opens the login page, send them to the dashboard.
   if (pathname.startsWith('/admin/login')) {
