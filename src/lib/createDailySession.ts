@@ -1,6 +1,24 @@
 // src/lib/createDailySession.ts
 import prisma from '@/lib/prisma'
 
+const INDIA_TIME_ZONE = 'Asia/Kolkata'
+
+function getIndiaTodayStart(): Date {
+  const now = new Date()
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: INDIA_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(now)
+
+  const year = parts.find((part) => part.type === 'year')?.value || '1970'
+  const month = parts.find((part) => part.type === 'month')?.value || '01'
+  const day = parts.find((part) => part.type === 'day')?.value || '01'
+
+  return new Date(`${year}-${month}-${day}T00:00:00+05:30`)
+}
+
 export interface AttendanceSessionRecord {
   id: string
   date: string
@@ -40,9 +58,7 @@ function normalizeSessionRow(row: {
  * The AttendanceSession model stores one session per calendar day.
  */
 export function getTodaySessionDate(): Date {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  return today
+  return getIndiaTodayStart()
 }
 
 export function getTodaySessionDateIso(): string {

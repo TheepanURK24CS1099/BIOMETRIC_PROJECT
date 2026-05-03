@@ -5,6 +5,17 @@ import { getAuthFromRequest } from '@/lib/auth'
 import { getTodayDate } from '@/lib/utils'
 import { getTodaySession } from '@/lib/createDailySession'
 
+function getIndiaDateOffset(days: number): string {
+  const d = new Date()
+  d.setUTCDate(d.getUTCDate() + days)
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(d)
+}
+
 const FINAL_ABSENT_STATUSES = ['MORNING OUT NOT MARKED', 'NOT RETURNED', 'NO ATTENDANCE', 'ABSENT']
 
 function isMarkedRecord(record: { outTime?: string | null; inTime?: string | null; status?: string | null }): boolean {
@@ -51,9 +62,7 @@ export async function GET(req: NextRequest) {
     // Weekly trend (last 7 days)
     const weeklyTrend = []
     for (let i = 6; i >= 0; i--) {
-      const d = new Date()
-      d.setDate(d.getDate() - i)
-      const dateStr = d.toISOString().split('T')[0]
+      const dateStr = getIndiaDateOffset(-i)
       const [p, a, l] = await Promise.all([
         (prisma.attendance.findMany as any)({
           where: { date: dateStr },
