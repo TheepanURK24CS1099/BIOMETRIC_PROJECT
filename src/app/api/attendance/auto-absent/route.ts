@@ -15,11 +15,11 @@ import { runAutoAbsent } from '@/lib/auto-absent'
  * - Manual trigger from admin panel
  */
 export async function POST(req: NextRequest) {
-  // Allow cron secret or admin auth
   const cronSecret = req.headers.get('x-cron-secret')
-  const isValidCron = cronSecret && cronSecret === process.env.CRON_SECRET
-
-  if (!isValidCron) {
+  if (cronSecret && cronSecret === process.env.CRON_SECRET) {
+    // allow cron
+  } else {
+    // existing admin auth check
     const auth = await getAuthFromRequest(req)
     if (!auth) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
