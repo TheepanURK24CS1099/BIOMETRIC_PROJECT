@@ -1,5 +1,5 @@
 import prisma from '@/lib/prisma'
-import { formatDate, formatTime, getStatusBadgeColor } from '@/lib/utils'
+import { formatDate, formatTime, getTodayDate, getStatusBadgeColor } from '@/lib/utils'
 
 type NotificationRow = {
   id: string
@@ -55,7 +55,7 @@ export default async function NotificationsPage() {
       <div>
         <h1 className="font-display text-3xl font-800 text-white">Notification Logs</h1>
         <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
-          {formatDate(recentAttendance[0]?.date || new Date().toISOString().split('T')[0])} · Recent attendance notifications
+          {formatDate(recentAttendance[0]?.date || getTodayDate())} · Recent attendance notifications
         </p>
       </div>
 

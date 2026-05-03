@@ -1,26 +1,13 @@
 // src/lib/utils.ts
 import { format, parseISO } from 'date-fns'
 
-const INDIA_TIME_ZONE = 'Asia/Kolkata'
-
-function getIndiaNow(): Date {
-  const now = new Date()
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: INDIA_TIME_ZONE,
+export function getTodayDate(): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
-  }).formatToParts(now)
-
-  const year = parts.find((part) => part.type === 'year')?.value || '1970'
-  const month = parts.find((part) => part.type === 'month')?.value || '01'
-  const day = parts.find((part) => part.type === 'day')?.value || '01'
-
-  return new Date(`${year}-${month}-${day}T00:00:00+05:30`)
-}
-
-export function getTodayDate(): string {
-  return format(getIndiaNow(), 'yyyy-MM-dd')
+  }).format(new Date())
 }
 
 export function getCurrentTime(): string {

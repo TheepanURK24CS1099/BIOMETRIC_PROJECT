@@ -8,7 +8,7 @@
  */
 
 import prisma from '@/lib/prisma'
-import { formatClockTime } from '@/lib/utils'
+import { formatClockTime, getTodayDate } from '@/lib/utils'
 
 export interface SMSResult {
   success: boolean
@@ -129,7 +129,7 @@ export async function sendAttendanceSMS(
     ? { studentName, status: status || 'ABSENT', parentPhone: phone || '' }
     : studentName
 
-  const dateText = data.date || new Date().toISOString().split('T')[0]
+  const dateText = data.date || getTodayDate()
   const timeText = data.time ? formatClockTime(data.time) : formatClockTime(new Date().toTimeString().slice(0, 8))
   const message = `${buildMessage(data.studentName, data.status)}\nDate: ${dateText}\nTime: ${timeText}`
 

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
-import { formatDate, formatTime, getStatusBadgeColor } from '@/lib/utils'
+import { formatDate, formatTime, getTodayDate, getStatusBadgeColor } from '@/lib/utils'
 import { io, Socket } from 'socket.io-client'
 
 interface Stats {
@@ -276,7 +276,7 @@ export default function DashboardPage() {
         <div>
           <h1 className="font-display text-3xl font-800 text-white">Dashboard</h1>
           <p className="mt-1 text-sm" style={{ color: 'var(--text-secondary)' }}>
-            {stats ? formatDate(stats.date) : 'Today'} · Live Overview
+            {formatDate(getTodayDate())} · Live Overview
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
