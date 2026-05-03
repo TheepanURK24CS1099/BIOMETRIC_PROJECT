@@ -14,20 +14,20 @@ import { runAutoAbsent } from '@/lib/auto-absent'
  * - External cron service
  * - Manual trigger from admin panel
  */
-export async function POST(req: NextRequest) {
-  const cronSecret = req.headers.get('x-cron-secret')
+export async function POST(request: NextRequest) {
+  const cronSecret = request.headers.get('x-cron-secret')
   if (cronSecret && cronSecret === process.env.CRON_SECRET) {
     // allow cron
   } else {
     // existing admin auth check
-    const auth = await getAuthFromRequest(req)
+    const auth = await getAuthFromRequest(request)
     if (!auth) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
     }
   }
 
   try {
-    const body = await req.json().catch(() => ({}))
+    const body = await request.json().catch(() => ({}))
     const date = body.date || undefined
 
     const result = await runAutoAbsent(date)
