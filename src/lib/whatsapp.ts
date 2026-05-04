@@ -7,6 +7,11 @@ type SendWhatsAppParams = {
   message: string
 }
 
+function normalizeTemplateName(value: string): string {
+  const cleaned = value.replace(/^hello\s+/i, '').trim()
+  return cleaned || 'Parent'
+}
+
 export type AttendanceWhatsAppPayload = {
   phone: string
   parentName: string
@@ -87,7 +92,7 @@ export async function sendAttendanceWhatsApp(payload: AttendanceWhatsAppPayload)
       },
       body: JSON.stringify({
         phone: normalizePhone(payload.phone),
-        parent: payload.parentName,
+        parent: normalizeTemplateName(payload.parentName),
         name: payload.studentName,
         status: payload.status,
         date: payload.date,

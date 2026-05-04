@@ -1,6 +1,41 @@
 // src/lib/utils.ts
 import { format, parseISO } from 'date-fns'
 
+const INDIA_TIME_ZONE = 'Asia/Kolkata'
+
+function formatTimeInTimeZone(date: Date): string {
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: INDIA_TIME_ZONE,
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  }).format(date)
+}
+
+function parseClockTime(value: string): Date | null {
+  const trimmed = value.trim()
+
+  if (!trimmed) return null
+
+  const isoDate = new Date(trimmed)
+  if (!Number.isNaN(isoDate.getTime()) && /[tTzZ]|[+-]\d{2}:?\d{2}$/.test(trimmed)) {
+    return isoDate
+  }
+
+  const match = trimmed.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/)
+  if (!match) return null
+
+  const hour = Number(match[1])
+  const minute = Number(match[2])
+  const second = Number(match[3] || '0')
+
+  if (Number.isNaN(hour) || Number.isNaN(minute) || Number.isNaN(second)) {
+    return null
+  }
+
+  return new Date(Date.UTC(1970, 0, 1, hour, minute, second))
+}
+
 export function getTodayDate(): string {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Kolkata',
@@ -37,6 +72,12 @@ export function formatTime(time: string | null | undefined): string {
 
 export function formatClockTime(time: string | null | undefined): string {
   if (!time) return '—'
+
+  const parsed = parseClockTime(time)
+  if (parsed) {
+    return formatTimeInTimeZone(parsed)
+  }
+
   const normalized = time.length === 5 ? `${time}:00` : time
   return formatTime(normalized)
 }
