@@ -4,7 +4,7 @@ import prisma from '@/lib/prisma'
 import { getAuthFromRequest } from '@/lib/auth'
 import { closeTodaySession, ensureTodaySessionExists } from '@/lib/createDailySession'
 import { getTodayDate } from '@/lib/utils'
-import { runAutoAbsent } from '@/lib/auto-absent'
+import { runAttendanceCloseChecks } from '@/lib/auto-absent'
 
 /**
  * POST /api/attendance/auto-absent
@@ -27,10 +27,14 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const body = await request.json().catch(() => ({}))
-    const date = body.date || undefined
+    const { mode, date } = await request.json()
 
-    const result = await runAutoAbsent(date)
+    console.log('Auto absent mode:', mode)
+
+    const result = await runAttendanceCloseChecks({
+      mode: mode === 'morning' || mode === 'night' ? mode : undefined,
+      date: date || undefined,
+    })
 
     if (result.mode === 'night') {
       await ensureTodaySessionExists()
