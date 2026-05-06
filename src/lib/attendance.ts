@@ -186,9 +186,11 @@ export async function markAttendanceByFingerprint(fingerprintId: string | null |
     }
   }
 
-  const isMorningOutNotMarked = existing?.status === 'MORNING OUT NOT MARKED' && !existing.outTime
+  const existingStatus = existing?.status ?? null
+  const isMorningOutNotMarked = existingStatus === 'MORNING OUT NOT MARKED'
+  const isOutMarked = existingStatus === 'OUT MARKED'
   const isOutToInTransition = Boolean(existing?.outTime) && !existing?.inTime
-  const notificationStatus: AttendanceNotificationStatus = isMorningOutNotMarked || isOutToInTransition
+  const notificationStatus: AttendanceNotificationStatus = isMorningOutNotMarked || isOutMarked || isOutToInTransition
     ? 'IN to hostel'
     : 'OUT from hostel'
 
@@ -218,17 +220,17 @@ export async function markAttendanceByFingerprint(fingerprintId: string | null |
       },
     })
     console.log(`IN marked for fingerprintId ${normalizedFingerprintId} after morning close`)
-  } else if (!existing.outTime) {
+  } else if (isOutMarked) {
     attendance = await (prisma.attendance.update as any)({
       where: { id: existing.id },
       data: {
         studentName: student.name,
-        status: 'OUT MARKED',
+        status: 'IN MARKED',
         time: currentTime,
-        outTime: currentTime,
+        inTime: currentTime,
       },
     })
-    console.log(`OUT marked for fingerprintId ${normalizedFingerprintId}`)
+    console.log(`IN marked for fingerprintId ${normalizedFingerprintId}`)
   } else {
     attendance = await (prisma.attendance.update as any)({
       where: { id: existing.id },
