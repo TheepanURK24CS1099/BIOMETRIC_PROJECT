@@ -173,6 +173,27 @@ export async function markAttendanceByFingerprint(fingerprintId: string | null |
     },
   })) as any
 
+  if (existing?.status === 'MORNING OUT NOT MARKED') {
+    const updatedAttendance = await (prisma.attendance.update as any)({
+      where: { id: existing.id },
+      data: {
+        status: 'IN MARKED',
+        inTime: currentTime,
+        time: currentTime,
+        outTime: null,
+      },
+    })
+
+    console.log(`IN marked after morning missed scan for fingerprintId: ${normalizedFingerprintId}`)
+
+    return {
+      success: true,
+      statusCode: 200,
+      message: `IN marked for ${student.name}`,
+      data: { student, attendance: updatedAttendance },
+    }
+  }
+
   if (existing && isDuplicateFinalRecord(existing)) {
     console.log(`Duplicate scan prevented for ${student.fingerprintId}`)
     return {
