@@ -2,7 +2,7 @@
 // src/app/admin/attendance/page.tsx
 import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
-import { getTodayDate, formatDate, formatTime, getStatusBadgeColor } from '@/lib/utils'
+import { getTodayDate, formatDate, formatClockTime, getStatusBadgeColor } from '@/lib/utils'
 import type { Attendance } from '@/types'
 
 type AttendanceWithStudent = Attendance & { student: { name: string; roomNumber: string; fingerprintId: string } }
@@ -143,10 +143,10 @@ export default function AttendancePage() {
                     </td>
                     <td className="px-5 py-4 text-sm" style={{ color: 'var(--text-secondary)' }}>{r.student.roomNumber}</td>
                     <td className="px-5 py-4">
-                      <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(16,185,129,0.1)', color: '#10b981' }}>{formatTime(r.outTime)}</span>
+                      <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(16,185,129,0.1)', color: '#10b981' }}>{formatClockTime(r.outTime)}</span>
                     </td>
                     <td className="px-5 py-4">
-                      <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(56,189,248,0.1)', color: '#38bdf8' }}>{formatTime(r.inTime)}</span>
+                      <span className="text-xs px-2 py-1 rounded-full" style={{ background: 'rgba(56,189,248,0.1)', color: '#38bdf8' }}>{formatClockTime(r.inTime)}</span>
                     </td>
                     <td className="px-5 py-4">
                       <span className={`badge ${getStatusBadgeColor(r.status)}`}>{r.status}</span>

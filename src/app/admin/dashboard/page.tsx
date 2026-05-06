@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
-import { formatDate, formatTime, getTodayDate, getStatusBadgeColor } from '@/lib/utils'
+import { formatDate, formatClockTime, getTodayDate, getStatusBadgeColor } from '@/lib/utils'
 import { io, Socket } from 'socket.io-client'
 
 interface Stats {
@@ -481,8 +481,8 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex flex-col items-end gap-1">
                   <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-muted)' }}>
-                    <span>OUT {formatTime(record.outTime || record.time)}</span>
-                    <span>IN {formatTime(record.inTime)}</span>
+                    <span>OUT {formatClockTime(record.outTime || record.time)}</span>
+                    <span>IN {formatClockTime(record.inTime)}</span>
                   </div>
                   <span className={`badge ${getStatusBadgeColor(record.status)}`}>{record.status}</span>
                 </div>
